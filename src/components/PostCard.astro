@@ -1,0 +1,23 @@
+---
+// One row in the blog list.
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+  url: string;
+  title: string;
+  description?: string;
+  pubDate: Date;
+}
+const { url, title, description, pubDate } = Astro.props;
+---
+<article class="post-card">
+  <h3><a href={url}>{title}</a></h3>
+  <p class="muted small"><FormattedDate date={pubDate} /></p>
+  {description && <p class="muted">{description}</p>}
+</article>
+
+<style>
+  .post-card { padding: 1rem 0; border-bottom: 1px solid var(--color-border); }
+  .post-card h3 { margin: 0 0 0.15rem; }
+  .post-card p { margin: 0; }
+</style>

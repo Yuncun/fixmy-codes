@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; color:#ccc; font-family:'SF Mono','JetBrains Mono',monospace; overflow:hidden; width:100vw; height:100vh; display:flex; flex-direction:column; }
+
+/* Top bar */
+.topbar {
+  height:36px; display:flex; align-items:center; padding:0 24px; gap:28px;
+  font-size:11px; color:#555; border-bottom:1px solid #0a0a0a; flex-shrink:0;
+}
+.topbar .item { display:flex; align-items:center; gap:6px; }
+.topbar .value { color:#888; }
+.topbar .urgent { color:#fca5a5; }
+.topbar .notice { color:#facc15; }
+.topbar .clock { margin-left:auto; color:#333; font-size:13px; letter-spacing:1px; }
+
+.main { flex:1; display:flex; overflow:hidden; position:relative; }
+
+/* Left: Live widgets — overlaps into Haru's space */
+.left { width:340px; display:flex; flex-direction:column; padding:16px 0 16px 20px; gap:12px; z-index:10; }
+.widget {
+  border:1px solid #151515; border-radius:6px; padding:10px 12px;
+  background:rgba(255,255,255,0.015);
+}
+.widget-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#333; margin-bottom:6px; }
+.widget-main { font-size:13px; color:#888; }
+.widget-sub { font-size:10px; color:#444; margin-top:3px; }
+
+/* Now Playing */
+.now-playing .track { color:#4ade80; font-size:13px; }
+.now-playing .artist { color:#2a6a40; font-size:11px; }
+.progress-bar { height:2px; background:#151515; border-radius:1px; margin-top:8px; }
+.progress-fill { height:100%; background:#4ade80; border-radius:1px; width:65%; }
+
+/* Active App */
+.active-app .app-name { color:#60a5fa; font-size:14px; }
+.active-app .app-detail { color:#2a4a6a; font-size:10px; }
+
+/* Sparklines */
+.sparkline-widget { padding:8px 12px; }
+.spark-row { display:flex; align-items:end; gap:1px; height:24px; margin-top:4px; }
+.spark-bar { width:4px; background:#4ade80; border-radius:1px 1px 0 0; opacity:0.6; }
+.spark-row.net .spark-bar { background:#60a5fa; }
+.spark-value { font-size:11px; color:#555; margin-left:8px; align-self:center; }
+
+/* Center: Haru — absolute so panels can overlap */
+.center {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.haru-placeholder {
+  width:400px; height:90%; border:1px dashed #1a1a1a; border-radius:12px;
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px;
+}
+.haru-placeholder .label { font-size:11px; color:#333; letter-spacing:3px; }
+.haru-state {
+  position:absolute; top:14px; left:50%; transform:translateX(-50%);
+  font-size:10px; letter-spacing:2px;
+}
+.haru-state.attentive { color:#facc15; }
+.haru-state.idle { color:#333; }
+.haru-state.alert { color:#ef4444; }
+
+/* Right: Activity Feed — overlaps into Haru's space */
+.right { width:480px; display:flex; flex-direction:column; padding:12px 20px 12px 0; z-index:10; margin-left:auto; }
+.feed-header { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#333; margin-bottom:10px; padding-left:14px; }
+.feed { flex:1; display:flex; flex-direction:column; gap:1px; overflow:hidden; justify-content:flex-end; }
+.feed-item {
+  display:flex; align-items:flex-start; gap:8px; padding:6px 12px;
+  border-left:2px solid transparent; border-radius:0 3px 3px 0;
+  font-size:11px; line-height:1.5;
+}
+.feed-item .time { color:#222; min-width:38px; flex-shrink:0; font-size:10px; margin-top:1px; }
+.feed-item .icon { flex-shrink:0; font-size:12px; }
+.feed-item .msg { flex:1; }
+
+.feed-item.urgent { border-left-color:#ef4444; background:rgba(239,68,68,0.03); }
+.feed-item.urgent .msg { color:#fca5a5; }
+.feed-item.notice { border-left-color:#facc15; background:rgba(250,204,21,0.015); }
+.feed-item.notice .msg { color:#999; }
+.feed-item.ambient { border-left-color:#111; }
+.feed-item.ambient .msg { color:#444; }
+
+/* Chat messages get special treatment */
+.feed-item.chat-user .msg { color:#60a5fa; }
+.feed-item.chat-diane .msg { color:#a78bfa; }
+
+/* Status Bar */
+.statusbar {
+  height:24px; border-top:1px solid #0a0a0a; display:flex; align-items:center;
+  padding:0 24px; font-size:9px; color:#282828; gap:16px; flex-shrink:0;
+}
+.dot { width:5px; height:5px; border-radius:50%; display:inline-block; margin-right:4px; background:#4ade80; }
+.dot.warn { background:#facc15; }
+</style></head><body>
+
+<!-- TOP BAR: slow/stable info -->
+<div class="topbar">
+  <div class="item">☁️ <span class="value">62°F</span></div>
+  <div class="item">📅 <span class="notice">Standup in 28m</span></div>
+  <div class="item">📧 <span class="urgent">3 unread</span></div>
+  <div class="item">🔀 <span class="value">2 PRs open</span></div>
+  <div class="clock">8:03:41 PM</div>
+</div>
+
+<div class="main">
+  <!-- LEFT: Live Widgets -->
+  <div class="left">
+    <!-- Now Playing -->
+    <div class="widget now-playing">
+      <div class="widget-label">Now Playing</div>
+      <div class="track">Get Lucky</div>
+      <div class="artist">Daft Punk · Random Access Memories</div>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+    </div>
+
+    <!-- Active App -->
+    <div class="widget active-app">
+      <div class="widget-label">Active App</div>
+      <div class="app-name">VS Code</div>
+      <div class="app-detail">dashboard.html — live2d-poc</div>
+    </div>
+
+    <!-- CPU Sparkline -->
+    <div class="widget sparkline-widget">
+      <div class="widget-label">CPU</div>
+      <div style="display:flex;align-items:end">
+        <div class="spark-row">
+          <div class="spark-bar" style="height:4px"></div>
+          <div class="spark-bar" style="height:8px"></div>
+          <div class="spark-bar" style="height:6px"></div>
+          <div class="spark-bar" style="height:14px"></div>
+          <div class="spark-bar" style="height:10px"></div>
+          <div class="spark-bar" style="height:18px"></div>
+          <div class="spark-bar" style="height:12px"></div>
+          <div class="spark-bar" style="height:8px"></div>
+          <div class="spark-bar" style="height:20px"></div>
+          <div class="spark-bar" style="height:15px"></div>
+          <div class="spark-bar" style="height:6px"></div>
+          <div class="spark-bar" style="height:10px"></div>
+          <div class="spark-bar" style="height:8px"></div>
+          <div class="spark-bar" style="height:22px"></div>
+          <div class="spark-bar" style="height:14px"></div>
+          <div class="spark-bar" style="height:9px"></div>
+        </div>
+        <span class="spark-value">12%</span>
+      </div>
+    </div>
+
+    <!-- Network Sparkline -->
+    <div class="widget sparkline-widget">
+      <div class="widget-label">Network</div>
+      <div style="display:flex;align-items:end">
+        <div class="spark-row net">
+          <div class="spark-bar" style="height:12px"></div>
+          <div class="spark-bar" style="height:6px"></div>
+          <div class="spark-bar" style="height:20px"></div>
+          <div class="spark-bar" style="height:24px"></div>
+          <div class="spark-bar" style="height:8px"></div>
+          <div class="spark-bar" style="height:4px"></div>
+          <div class="spark-bar" style="height:16px"></div>
+          <div class="spark-bar" style="height:10px"></div>
+          <div class="spark-bar" style="height:22px"></div>
+          <div class="spark-bar" style="height:6px"></div>
+          <div class="spark-bar" style="height:14px"></div>
+          <div class="spark-bar" style="height:8px"></div>
+          <div class="spark-bar" style="height:18px"></div>
+          <div class="spark-bar" style="height:12px"></div>
+          <div class="spark-bar" style="height:4px"></div>
+          <div class="spark-bar" style="height:10px"></div>
+        </div>
+        <span class="spark-value">2.1 MB/s</span>
+      </div>
+    </div>
+
+    <!-- RAM -->
+    <div class="widget">
+      <div class="widget-label">Memory</div>
+      <div class="widget-main">61% <span style="font-size:10px;color:#444">· 6.2 GB free</span></div>
+    </div>
+
+    <!-- Disk -->
+    <div class="widget">
+      <div class="widget-label">Disk</div>
+      <div class="widget-main">8% <span style="font-size:10px;color:#444">· 133 GB free</span></div>
+    </div>
+  </div>
+
+  <!-- CENTER: Haru -->
+  <div class="center">
+    <div class="haru-state attentive">▲ ATTENTIVE — calendar in 28m</div>
+    <div class="haru-placeholder">
+      <div style="font-size:56px;opacity:0.2">🐍</div>
+      <div class="label">HARU</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Activity Feed -->
+  <div class="right">
+    <div class="feed-header">▸ Activity</div>
+    <div class="feed">
+      <div class="feed-item ambient">
+        <span class="time">19:40</span>
+        <span class="icon">📁</span>
+        <span class="msg">~/workspace/MEMORY.md modified</span>
+      </div>
+      <div class="feed-item urgent">
+        <span class="time">19:42</span>
+        <span class="icon">📧</span>
+        <span class="msg">New email — <b>boss@msft</b>: Re: Q1 review</span>
+      </div>
+      <div class="feed-item notice">
+        <span class="time">19:44</span>
+        <span class="icon">🔧</span>
+        <span class="msg">tool:exec — peekaboo image --mode screen</span>
+      </div>
+      <div class="feed-item notice">
+        <span class="time">19:45</span>
+        <span class="icon">🔀</span>
+        <span class="msg">PR #42 approved by @reviewer</span>
+      </div>
+      <div class="feed-item chat-user notice">
+        <span class="time">19:47</span>
+        <span class="icon">💬</span>
+        <span class="msg"><b>Eric:</b> can you check the dashboard logs</span>
+      </div>
+      <div class="feed-item ambient">
+        <span class="time">19:47</span>
+        <span class="icon">🔧</span>
+        <span class="msg">tool:read — log-server.js</span>
+      </div>
+      <div class="feed-item ambient">
+        <span class="time">19:47</span>
+        <span class="icon">🔧</span>
+        <span class="msg">tool:exec — pkill -f "node log-server"</span>
+      </div>
+      <div class="feed-item chat-diane notice">
+        <span class="time">19:48</span>
+        <span class="icon">🤖</span>
+        <span class="msg"><b>Diane:</b> on it — restarted the log server, both panels should be live now</span>
+      </div>
+      <div class="feed-item ambient">
+        <span class="time">19:49</span>
+        <span class="icon">📁</span>
+        <span class="msg">~/workspace/projects/diane-avatar/dashboard.html modified</span>
+      </div>
+      <div class="feed-item notice">
+        <span class="time">19:51</span>
+        <span class="icon">✅</span>
+        <span class="msg">CI passed — diane-avatar main</span>
+      </div>
+      <div class="feed-item ambient">
+        <span class="time">19:53</span>
+        <span class="icon">🎵</span>
+        <span class="msg">Now playing: Get Lucky — Daft Punk</span>
+      </div>
+      <div class="feed-item notice">
+        <span class="time">19:55</span>
+        <span class="icon">📅</span>
+        <span class="msg">Team standup in <b>30 min</b></span>
+      </div>
+      <div class="feed-item ambient">
+        <span class="time">19:56</span>
+        <span class="icon">🔧</span>
+        <span class="msg">tool:write — wireframe.html (8.2 KB)</span>
+      </div>
+      <div class="feed-item urgent">
+        <span class="time">19:58</span>
+        <span class="icon">🔴</span>
+        <span class="msg">CI failed — diane-app #17 — 3 lint errors</span>
+      </div>
+      <div class="feed-item chat-user notice">
+        <span class="time">20:01</span>
+        <span class="icon">💬</span>
+        <span class="msg"><b>Eric:</b> yeah great! make the elements bigger so they touch haru's area</span>
+      </div>
+      <div class="feed-item chat-diane notice">
+        <span class="time">20:02</span>
+        <span class="icon">🤖</span>
+        <span class="msg"><b>Diane:</b> updated the wireframe — wider panels, tighter to center</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span><span class="dot"></span>GATEWAY</span>
+  <span><span class="dot"></span>FEEDS</span>
+  <span><span class="dot"></span>MODEL</span>
+  <span style="flex:1"></span>
+  <span>main · opus-4 · 3.2k tokens</span>
+</div>
+
+</body></html>

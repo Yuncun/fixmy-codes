@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diane Dashboard — Live Feed</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; color: #ccc; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px; padding: 20px; }
+  h1 { color: #facc15; font-size: 16px; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 11px; margin-bottom: 16px; }
+  .status { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin-bottom: 16px; }
+  .status.connected { background: #14532d; color: #4ade80; }
+  .status.disconnected { background: #451a03; color: #f97316; }
+  .status.connecting { background: #1e1b4b; color: #a78bfa; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel { background: #111; border: 1px solid #222; border-radius: 4px; padding: 12px; }
+  .panel-title { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+
+  .vitals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .vital { display: flex; justify-content: space-between; }
+  .vital-label { color: #666; }
+  .vital-value { color: #facc15; font-variant-numeric: tabular-nums; }
+  .vital-value.high { color: #f97316; }
+  .vital-value.critical { color: #ef4444; }
+
+  .state-display { text-align: center; padding: 20px; }
+  .state-name { font-size: 28px; color: #facc15; text-transform: uppercase; letter-spacing: 3px; }
+  .state-trigger { color: #666; font-size: 11px; margin-top: 4px; }
+
+  .feed { max-height: 400px; overflow-y: auto; }
+  .feed-item { padding: 4px 0; border-bottom: 1px solid #1a1a1a; display: flex; gap: 8px; }
+  .feed-time { color: #444; white-space: nowrap; min-width: 65px; }
+  .feed-text { color: #999; word-break: break-word; }
+  .feed-item.urgent .feed-text { color: #ef4444; }
+  .feed-item.notice .feed-text { color: #facc15; }
+  .feed-item.chat-user .feed-text { color: #60a5fa; }
+  .feed-item.chat-assistant .feed-text { color: #c084fc; }
+
+  .issues { margin-bottom: 16px; }
+  .issue { padding: 6px 8px; background: #1a0a0a; border-left: 3px solid #ef4444; margin-bottom: 4px; border-radius: 2px; }
+  .issue.warning { background: #1a1500; border-color: #f59e0b; }
+  .issue .sev { margin-right: 6px; }
+  .issue .sev.critical { color: #ef4444; }
+  .issue .sev.warning { color: #f59e0b; }
+
+  .counter { color: #666; font-size: 11px; text-align: right; margin-top: 8px; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #111; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<h1>DIANE DASHBOARD</h1>
+<div class="subtitle">Live telemetry from Eric's Mac mini — Peters-Mac-mini.local</div>
+<div id="status" class="status connecting">CONNECTING...</div>
+<div id="auth-prompt" style="display:none; margin: 40px 0; text-align: center;">
+  <p style="color: #888; margin-bottom: 16px;">Sign in to view live dashboard data</p>
+  <a href="/.auth/login/github?post_login_redirect_uri=/demo.html" style="display: inline-block; padding: 10px 24px; background: #238636; color: #fff; text-decoration: none; border-radius: 6px; font-family: -apple-system, sans-serif; font-size: 14px;">Sign in with GitHub</a>
+  <p style="color: #555; margin-top: 12px; font-size: 11px;">Requires authorized GitHub account</p>
+</div>
+
+<div id="issues-container" class="issues"></div>
+
+<div class="grid">
+  <div class="panel">
+    <div class="panel-title">System Vitals</div>
+    <div class="vitals-grid">
+      <div class="vital"><span class="vital-label">CPU</span><span id="v-cpu" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Memory</span><span id="v-mem" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Disk</span><span id="v-disk" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Net</span><span id="v-net" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Procs</span><span id="v-proc" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Disk I/O</span><span id="v-io" class="vital-value">—</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Agent State</div>
+    <div class="state-display">
+      <div id="state-name" class="state-name">—</div>
+      <div id="state-trigger" class="state-trigger">waiting for data...</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Context</div>
+    <div class="vitals-grid">
+      <div class="vital"><span class="vital-label">Weather</span><span id="v-weather" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Email</span><span id="v-email" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">GitHub PRs</span><span id="v-github" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Calendar</span><span id="v-cal" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Model</span><span id="v-model" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Tokens</span><span id="v-tokens" class="vital-value">—</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Info</div>
+    <div class="vitals-grid">
+      <div class="vital"><span class="vital-label">Poll rate</span><span id="v-rate" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Messages</span><span id="v-msgcount" class="vital-value">0</span></div>
+      <div class="vital"><span class="vital-label">Uptime</span><span id="v-uptime" class="vital-value">—</span></div>
+      <div class="vital"><span class="vital-label">Music</span><span id="v-music" class="vital-value">—</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Activity Feed</div>
+  <div id="feed" class="feed"></div>
+  <div id="counter" class="counter"></div>
+</div>
+
+<script>
+let PUBSUB_URL = new URLSearchParams(location.search).get('ws');
+let GROUP = 'Peters-Mac-mini.local';
+
+let ws;
+let msgCount = 0;
+let startTime = Date.now();
+let reconnectDelay = 1000;
+
+async function init() {
+  if (!PUBSUB_URL) {
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = 'CHECKING AUTH...';
+    statusEl.className = 'status connecting';
+    try {
+      const res = await fetch('/api/negotiate');
+      if (res.redirected || res.status === 401 || res.status === 302 || !res.ok) {
+        // Not authenticated — show sign-in button
+        statusEl.textContent = 'NOT SIGNED IN';
+        statusEl.className = 'status disconnected';
+        document.getElementById('auth-prompt').style.display = 'block';
+        return;
+      }
+      const data = await res.json();
+      PUBSUB_URL = data.url;
+      GROUP = data.group || GROUP;
+      document.getElementById('auth-prompt').style.display = 'none';
+    } catch (e) {
+      statusEl.textContent = 'NOT SIGNED IN';
+      statusEl.className = 'status disconnected';
+      document.getElementById('auth-prompt').style.display = 'block';
+      return;
+    }
+  }
+  connect();
+}
+
+init();
+
+function connect() {
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = 'CONNECTING...';
+  statusEl.className = 'status connecting';
+
+  try { ws = new WebSocket(PUBSUB_URL, 'json.webpubsub.azure.v1'); }
+  catch { setTimeout(connect, reconnectDelay); return; }
+
+  ws.onopen = () => {
+    statusEl.textContent = 'CONNECTED';
+    statusEl.className = 'status connected';
+    reconnectDelay = 1000;
+    ws.send(JSON.stringify({ type: 'joinGroup', group: GROUP }));
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const outer = JSON.parse(e.data);
+      if (outer.type !== 'message') return;
+      const msg = typeof outer.data === 'string' ? JSON.parse(outer.data) : outer.data;
+      msgCount++;
+      document.getElementById('v-msgcount').textContent = msgCount;
+      document.getElementById('v-uptime').textContent = Math.floor((Date.now() - startTime) / 60000) + 'm';
+
+      if (msg.channel === 'card') updateCard(msg.source, msg.cardData);
+      else if (msg.channel === 'feed') addFeed(msg);
+      else if (msg.channel === 'state' && msg.state) updateState(msg.state, msg.trigger);
+      else if (msg.channel === 'issues') updateIssues(msg.issues || []);
+    } catch {}
+  };
+
+  ws.onclose = () => {
+    statusEl.textContent = 'DISCONNECTED — reconnecting...';
+    statusEl.className = 'status disconnected';
+    setTimeout(connect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 1.5, 15000);
+  };
+  ws.onerror = () => ws.close();
+}
+
+function updateCard(source, d) {
+  if (source === 'system') {
+    setVital('v-cpu', d.cpuPct + '%', d.cpuPct >= 90 ? 'critical' : d.cpuPct >= 70 ? 'high' : '');
+    setVital('v-mem', d.ramPct + '% (' + d.ramFree + ')', d.ramPct >= 95 ? 'critical' : d.ramPct >= 85 ? 'high' : '');
+    setVital('v-disk', d.diskPct + '% (' + d.diskFree + ')', d.diskPct >= 90 ? 'critical' : d.diskPct >= 80 ? 'high' : '');
+    setVital('v-proc', d.procCount || '—');
+    setVital('v-io', d.diskIO + ' tps');
+  }
+  if (source === 'network') setVital('v-net', d.totalKBps + ' KB/s');
+  if (source === 'weather') setVital('v-weather', d.temp + ' ' + d.condition);
+  if (source === 'email') setVital('v-email', d.unread + ' unread');
+  if (source === 'github') setVital('v-github', d.openPRs + ' open');
+  if (source === 'calendar') setVital('v-cal', d.title + ' (' + d.timeUntil + ')');
+  if (source === 'heartbeat') setVital('v-rate', d.rate + 'ms (' + d.state + ')');
+  if (source === 'music') setVital('v-music', d.playing ? d.track + ' — ' + d.artist : '⏸');
+  if (source === 'context') {
+    setVital('v-model', d.model || '—');
+    setVital('v-tokens', d.percentUsed ? d.percentUsed + '% used' : '—');
+  }
+}
+
+function setVital(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'vital-value' + (cls ? ' ' + cls : '');
+}
+
+function updateState(state, trigger) {
+  document.getElementById('state-name').textContent = state;
+  document.getElementById('state-trigger').textContent = trigger || '';
+}
+
+function addFeed(msg) {
+  const feed = document.getElementById('feed');
+  const div = document.createElement('div');
+  let cls = 'feed-item';
+  if (msg.priority === 'urgent') cls += ' urgent';
+  else if (msg.priority === 'notice') cls += ' notice';
+  if (msg.chatRole === 'user') cls += ' chat-user';
+  else if (msg.chatRole === 'assistant') cls += ' chat-assistant';
+  div.className = cls;
+
+  const time = new Date(msg.time);
+  const ts = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  div.innerHTML = `<span class="feed-time">${ts}</span><span class="feed-text">${escHtml(msg.text || '')}</span>`;
+
+  feed.prepend(div);
+  // Cap at 100
+  while (feed.children.length > 100) feed.removeChild(feed.lastChild);
+  document.getElementById('counter').textContent = feed.children.length + ' events';
+}
+
+function updateIssues(issues) {
+  const c = document.getElementById('issues-container');
+  if (!issues.length) { c.innerHTML = ''; return; }
+  c.innerHTML = issues.map(i => {
+    const cls = i.severity === 'critical' ? 'critical' : 'warning';
+    const tri = i.severity === 'critical' ? '▲' : '△';
+    return `<div class="issue ${cls}"><span class="sev ${cls}">${tri}</span>${escHtml(i.text)}</div>`;
+  }).join('');
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

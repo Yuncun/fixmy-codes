@@ -1,0 +1,21 @@
+---
+// Blog index: every non-draft post, newest first.
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+<BaseLayout title="Blog" description="Posts.">
+  <h1>Blog</h1>
+  {posts.length === 0 && <p class="muted">No posts yet.</p>}
+  {posts.map((post) => (
+    <PostCard
+      url={`/blog/${post.id}/`}
+      title={post.data.title}
+      description={post.data.description}
+      pubDate={post.data.pubDate}
+    />
+  ))}
+</BaseLayout>

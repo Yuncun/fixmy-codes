@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a14; }
+    canvas { display: block; }
+    #controls {
+      position: fixed; top: 10px; left: 10px; z-index: 100;
+      display: flex; flex-wrap: wrap; gap: 6px; max-width: 600px;
+    }
+    #controls button {
+      padding: 4px 10px; font-size: 12px;
+      background: #333; color: #fff; border: 1px solid #555;
+      cursor: pointer; border-radius: 3px;
+    }
+    #controls button:hover { background: #555; }
+    #info {
+      position: fixed; bottom: 10px; left: 10px; z-index: 100;
+      color: #666; font: 11px monospace;
+    }
+    /* Layer editor panel */
+    #layer-panel {
+      position: fixed; top: 10px; right: 60px; z-index: 100;
+      background: rgba(20,20,30,0.92); border: 1px solid #444;
+      border-radius: 6px; padding: 10px; font: 11px monospace; color: #ccc;
+      max-height: 90vh; overflow-y: auto; min-width: 240px;
+      display: none;
+    }
+    #layer-panel.open { display: block; }
+    #layer-panel h3 { margin: 0 0 8px; color: #8af; font-size: 12px; }
+    .layer-group { margin-bottom: 10px; padding: 6px; background: rgba(255,255,255,0.04); border-radius: 4px; }
+    .layer-group .layer-name { color: #fa4; font-weight: bold; margin-bottom: 4px; }
+    .layer-group label { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+    .layer-group input[type=range] { flex: 1; accent-color: #8af; }
+    .layer-group .val { min-width: 40px; text-align: right; color: #8f8; }
+    #layer-panel button.export-btn {
+      margin-top: 8px; padding: 5px 12px; background: #284; color: #8f8;
+      border: 1px solid #4a6; border-radius: 3px; cursor: pointer; font: 11px monospace; width: 100%;
+    }
+    #layer-panel button.export-btn:hover { background: #3a6; }
+    #toggle-panel {
+      position: fixed; top: 10px; right: 10px; z-index: 101;
+      padding: 4px 10px; font-size: 12px;
+      background: #335; color: #8af; border: 1px solid #558;
+      border-radius: 3px; cursor: pointer; font-family: monospace;
+    }
+    /* Chat UI */
+    #chat-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      display: flex; gap: 6px; padding: 8px 12px;
+      background: rgba(10,10,20,0.9); border-top: 1px solid #333;
+    }
+    #chat-bar input {
+      flex: 1; padding: 8px 12px; font: 14px monospace;
+      background: #1a1a2e; color: #eee; border: 1px solid #444;
+      border-radius: 4px; outline: none;
+    }
+    #chat-bar input:focus { border-color: #8af; }
+    #chat-bar button {
+      padding: 8px 16px; font: 13px monospace; cursor: pointer;
+      background: #335; color: #8af; border: 1px solid #558; border-radius: 4px;
+    }
+    #chat-bar button:hover { background: #446; }
+    #chat-status {
+      position: fixed; bottom: 48px; left: 12px; z-index: 200;
+      font: 11px monospace; color: #666;
+    }
+    /* Speech bubble */
+    #speech-bubble {
+      position: fixed; z-index: 150;
+      max-width: 400px; padding: 10px 14px;
+      background: rgba(15,15,30,0.92); color: #ddd;
+      border: 1px solid #444; border-radius: 8px;
+      font: 13px/1.5 monospace; white-space: pre-wrap; word-wrap: break-word;
+      pointer-events: none;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+      opacity: 0; transform: translateY(5px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    #speech-bubble.visible { opacity: 1; transform: translateY(0); }
+    #speech-bubble::after {
+      content: ''; position: absolute; bottom: -8px; left: 50%;
+      transform: translateX(-50%);
+      border: 8px solid transparent; border-top-color: rgba(15,15,30,0.92);
+      border-bottom: none;
+    }
+    /* Thinking dots */
+    #speech-bubble .thinking-dots span {
+      animation: blink 1.4s infinite both;
+      font-size: 18px; letter-spacing: 3px;
+    }
+    #speech-bubble .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+    #speech-bubble .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100% { opacity: 0.2; } 40% { opacity: 1; } }
+    #haru-state {
+      position: fixed; bottom: 48px; right: 12px; z-index: 200;
+      font: 11px monospace; color: #666;
+    }
+    /* Terminal mode toggle */
+    #terminal-mode-toggle {
+      position: fixed; top: 10px; left: 550px; z-index: 101;
+      padding: 4px 8px; font: 12px monospace;
+      background: #222; color: #3f3; border: 1px solid #353;
+      border-radius: 3px; cursor: pointer;
+    }
+    #terminal-mode-toggle:hover { background: #333; }
+  </style>
+</head>
+<body>
+  <a href="index.html" style="position:fixed;top:40px;right:10px;z-index:100;padding:4px 12px;font-size:12px;background:#335;color:#8af;border:1px solid #558;border-radius:3px;text-decoration:none;font-family:monospace;cursor:pointer">← Live2D</a>
+  <button id="toggle-panel" onclick="document.getElementById('layer-panel').classList.toggle('open')">🎚 Layers</button>
+  <canvas id="text-rain" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:60;pointer-events:none;opacity:0.35"></canvas>
+  <div id="speech-bubble"></div>
+  <div id="chat-status">●  disconnected</div>
+  <div id="haru-state">😴 idle</div>
+  <div id="chat-bar">
+    <input id="chat-input" type="text" placeholder="Talk to Diane..." autocomplete="off" />
+    <button onclick="sendChat()">Send</button>
+  </div>
+  <div id="terminal-overlay" style="position:fixed;z-index:50;overflow:hidden;display:none;pointer-events:none">
+    <div id="terminal-content" style="width:100%;height:100%;overflow:hidden;padding:4px;box-sizing:border-box"></div>
+    <div id="terminal-scanlines" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.15) 0px,rgba(0,0,0,0.15) 1px,transparent 1px,transparent 3px)"></div>
+  </div>
+  <button id="terminal-mode-toggle" onclick="toggleTerminalMode()">Terminal: HTML</button>
+  <select id="scene-select" style="position:fixed;top:10px;left:350px;z-index:101;padding:4px 8px;font:12px monospace;background:#222;color:#8af;border:1px solid #558;border-radius:3px;cursor:pointer"></select>
+  <div id="layer-panel"></div>
+  <div id="controls">
+    <button onclick="resetCamera()">Reset Camera</button>
+    <button onclick="toggleWireframe()">Wireframe</button>
+    <button onclick="nudgeCamera('in')">Zoom In</button>
+    <button onclick="nudgeCamera('out')">Zoom Out</button>
+    <button onclick="nudgeCamera('left')">← Pan</button>
+    <button onclick="nudgeCamera('right')">Pan →</button>
+    <button onclick="nudgeCamera('up')">↑ Pan</button>
+    <button onclick="nudgeCamera('down')">Pan ↓</button>
+  </div>
+  <div id="info">2.5D Diorama Prototype — WASD/arrows to pan, scroll to zoom</div>
+  <div id="version" style="position:fixed;bottom:50px;right:12px;z-index:50;font:9px monospace;color:#333;opacity:0.4">v0.5.0</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js"></script>
+  <script src="lib/live2dcubismcore.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
+  <script type="module">
+    import * as THREE from 'three';
+    const PIXI = window.PIXI;
+    const { Live2DModel } = PIXI.live2d;
+
+    // ── Scene Setup ──
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a14);
+
+    const W = window.innerWidth, H = window.innerHeight;
+    window.camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+    const camera = window.camera;
+    camera.position.set(0, 0.5, 6);
+    camera.lookAt(0, 0.5, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;  // correct gamma output
+    document.body.appendChild(renderer.domElement);
+
+    // ── Texture Loader ──
+    const loader = new THREE.TextureLoader();
+    function loadTex(path) {
+      const tex = loader.load(path);
+      tex.minFilter = THREE.NearestFilter;
+      tex.magFilter = THREE.NearestFilter; // pixel art — no smoothing
+      tex.colorSpace = THREE.SRGBColorSpace;  // preserve sRGB colors
+      return tex;
+    }
+
+    // ── Scene Loader ──
+    const meshes = {};
+    let wireframeMode = false;
+    let rain = null;
+    let rainVelocities = [];
+    let currentScene = null;
+
+    async function loadScene(scenePath) {
+      // Clear existing
+      while (scene.children.length > 0) scene.remove(scene.children[0]);
+      scene.add(new THREE.AmbientLight(0xffffff, 1));
+      Object.keys(meshes).forEach(k => delete meshes[k]);
+
+      const resp = await fetch(scenePath);
+      const sceneData = await resp.json();
+      currentScene = sceneData;
+      document.getElementById('info').textContent = 
+        `Scene: ${sceneData.name} — WASD/arrows to pan, scroll to zoom`;
+
+      // Camera
+      if (sceneData.camera) {
+        const [cx, cy, cz] = sceneData.camera.position || [0, 0.5, 6];
+        camera.position.set(cx, cy, cz);
+        camera.fov = sceneData.camera.fov || 45;
+        camera.updateProjectionMatrix();
+        camera.lookAt(0, 0.5, 0);
+      }
+
+      // Layers — auto-scale to fill viewport at each depth
+      // At the reference depth (z=0), we want layers to be `baseWidth` wide.
+      // At other depths, scale proportionally so they fill the same screen space.
+      const camZ = camera.position.z;
+      const refZ = 0; // background reference depth
+      const baseWidth = 8; // width at z=0 that fills the screen
+      const aspect = 1536 / 1024; // source image aspect ratio
+
+      for (const layer of sceneData.layers) {
+        // Scale width so this layer fills the same screen area as baseWidth at refZ
+        const dist = camZ - (layer.z ?? 0);
+        const refDist = camZ - refZ;
+        const w = layer.width ?? (baseWidth * dist / refDist);
+        const h = layer.height ?? (w / aspect);
+
+        const geo = new THREE.PlaneGeometry(w, h);
+        let mat;
+        if (layer.texture) {
+          const tex = loadTex(layer.texture);
+          mat = new THREE.MeshBasicMaterial({
+            map: tex,
+            transparent: layer.transparent || false,
+            opacity: layer.opacity ?? 1.0,
+            side: THREE.DoubleSide,
+            alphaTest: layer.transparent ? 0.1 : 0,
+          });
+        } else if (layer.type === 'live2d') {
+          // Live2D placeholder — will be replaced with render-to-texture
+          mat = new THREE.MeshBasicMaterial({
+            color: 0x6644aa,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide,
+          });
+        } else if (layer.type === 'terminal') {
+          // Terminal placeholder — bright green so we can see it before canvas replaces it
+          mat = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            transparent: false,
+            opacity: 1.0,
+            side: THREE.DoubleSide,
+          });
+        } else {
+          mat = new THREE.MeshBasicMaterial({
+            color: 0x6644aa,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide,
+          });
+        }
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(layer.x ?? 0, layer.y ?? 0, layer.z ?? 0);
+        mesh.name = layer.name;
+        if (layer.visible === false) mesh.visible = false;
+        scene.add(mesh);
+        meshes[layer.name] = mesh;
+        console.log(`Layer "${layer.name}": z=${layer.z}, size=${w.toFixed(1)}x${h.toFixed(1)}, pos=(${(layer.x??0).toFixed(1)},${(layer.y??0).toFixed(1)},${(layer.z??0).toFixed(1)})`);
+
+      }
+
+      // Effects: rain — constrained to window area, rendered between bg and character
+      const fx = sceneData.effects?.rain;
+      if (fx?.enabled) {
+        const count = fx.count || 300;
+        const rainGeo = new THREE.BufferGeometry();
+        const positions = new Float32Array(count * 3);
+        rainVelocities = [];
+        const rainZ = 0.5; // between background (z=0) and character (z=2)
+        const [spdMin, spdMax] = fx.speed || [0.02, 0.05];
+
+        // Window bounds in world-space (from scene JSON or fallback to original coords)
+        const wb = sceneData.layout?.window_magenta_bounds;
+        const winPxL = wb?.x_min ?? 1100, winPxR = wb?.x_max ?? 1270;
+        const winPxT = wb?.y_min ?? 200,  winPxB = wb?.y_max ?? 860;
+        const bgW = 8, bgH = 5.3, bgCenterY = 0.5;
+        const winXmin = ((winPxL/1536) - 0.5) * bgW;
+        const winXmax = ((winPxR/1536) - 0.5) * bgW;
+        const winYmin = bgCenterY + (1 - winPxB/1024) * bgH - bgH/2;
+        const winYmax = bgCenterY + (1 - winPxT/1024) * bgH - bgH/2;
+        console.log(`Rain window bounds: x=[${winXmin.toFixed(2)}, ${winXmax.toFixed(2)}], y=[${winYmin.toFixed(2)}, ${winYmax.toFixed(2)}]`);
+
+        for (let i = 0; i < count; i++) {
+          positions[i * 3] = winXmin + Math.random() * (winXmax - winXmin);
+          positions[i * 3 + 1] = winYmin + Math.random() * (winYmax - winYmin);
+          positions[i * 3 + 2] = rainZ;
+          rainVelocities.push(spdMin + Math.random() * (spdMax - spdMin));
+        }
+        rainGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const rainMat = new THREE.PointsMaterial({
+          color: parseInt(fx.color) || 0x88aacc,
+          size: fx.size || 0.04,
+          transparent: true,
+          opacity: fx.opacity || 0.6,
+        });
+        rain = new THREE.Points(rainGeo, rainMat);
+        rain._windFactor = fx.wind || 0.05;
+        rain._bounds = { xMin: winXmin, xMax: winXmax, yMin: winYmin, yMax: winYmax };
+        scene.add(rain);
+      } else {
+        rain = null;
+      }
+
+      // Scene background color
+      if (sceneData.background) {
+        scene.background = new THREE.Color(sceneData.background);
+      } else {
+        scene.background = new THREE.Color(0x0a0a14);
+      }
+
+      console.log(`Loaded scene: ${sceneData.name} (${sceneData.layers.length} layers)`);
+      // Debug: log all meshes to info bar
+      const meshNames = Object.keys(meshes);
+      document.getElementById('info').textContent = 
+        `Scene: ${sceneData.name} | Meshes: ${meshNames.join(', ')} | Cam z=${camera.position.z.toFixed(1)}`;
+    }
+
+    // ── Live2D Offscreen Renderer ──
+    let live2dModel = null;
+    let live2dApp = null;
+    let live2dTexture = null;
+
+    async function initLive2D(layer) {
+      try {
+      const LIVE2D_W = 512, LIVE2D_H = 768;
+      
+      // Create offscreen PixiJS v6 app
+      live2dApp = new PIXI.Application({
+        width: LIVE2D_W,
+        height: LIVE2D_H,
+        backgroundAlpha: 0,
+        autoStart: true,
+      });
+      // Offscreen — don't attach canvas to DOM
+
+      const modelPath = layer.model || 'models/Haru/Haru.model3.json';
+      live2dModel = await Live2DModel.from(modelPath, { autoInteract: false });
+      
+      // Scale and position model within offscreen canvas
+      const scale = (LIVE2D_H * 0.85) / live2dModel.height;
+      live2dModel.scale.set(scale);
+      live2dModel.anchor.set(0.5, 0.5);
+      live2dModel.x = LIVE2D_W / 2;
+      live2dModel.y = LIVE2D_H / 2;
+      
+      live2dApp.stage.addChild(live2dModel);
+      
+      // Create Three.js texture from the PixiJS canvas
+      live2dTexture = new THREE.CanvasTexture(live2dApp.view);
+      live2dTexture.minFilter = THREE.LinearFilter;
+      live2dTexture.magFilter = THREE.LinearFilter;
+      
+      // Replace placeholder mesh material with live2d texture
+      if (meshes['character']) {
+        meshes['character'].material.dispose();
+        meshes['character'].material = new THREE.MeshBasicMaterial({
+          map: live2dTexture,
+          transparent: true,
+          side: THREE.DoubleSide,
+          alphaTest: 0.05,
+        });
+      }
+      
+      console.log('Live2D model loaded into diorama');
+      } catch(e) {
+        console.warn('Live2D init failed (scene still works):', e.message || e);
+      }
+    }
+
+    // ── Scene Registry ──
+    let origScales = {};
+    let terminalInterval = null;
+    const terminalEl = document.getElementById('terminal-overlay');
+    const terminalContent = document.getElementById('terminal-content');
+    const STORAGE_PREFIX = 'diorama:';
+    const textRainCanvas = document.getElementById('text-rain');
+    // Forward-declare functions called from switchScene (defined later)
+    var updateTextRainForScene = () => {};
+    var feedTextRain = () => {};
+
+    // 3D terminal state (hoisted to avoid TDZ in switchScene)
+    let terminalMode = 'html';
+    let termCanvas = null;
+    let termCanvasCtx = null;
+    let termTexture = null;
+    let termMesh = null;
+    let termLines3D = [];
+    let termLineIdx3D = 0;
+    let termInterval3D = null;
+    const TERM3D_W = 512, TERM3D_H = 384;
+    const TERM3D_MAX_LINES = 16;
+
+    function stopTerminal3DFeed() {
+      if (termInterval3D) { clearInterval(termInterval3D); termInterval3D = null; }
+    }
+
+    // Hacker terminal lines (hoisted here to avoid TDZ in setupTerminal)
+    const HACKER_LINES = [
+      '$ ssh root@192.168.1.42',
+      'Welcome to HexNode v3.7.2',
+      'Last login: Sun Feb 24 02:30:00 2026',
+      '$ cat /var/log/daemon.log | tail -20',
+      '[02:31:01] daemon: connection established ██████',
+      '[02:31:02] auth: key fingerprint verified',
+      '[02:31:03] sync: pulling from upstream...',
+      '[02:31:04] ████ packet_filter: 3 rules loaded',
+      '$ nmap -sV 10.0.0.0/24',
+      'Starting Nmap 7.94 ( https://nmap.org )',
+      'Scanning 256 hosts...',
+      '10.0.0.1  — router    (open: 22,80,443)',
+      '10.0.0.5  — fileserv  (open: 445,139)',
+      '10.0.0.12 — iot-cam   (open: 554,8080)',
+      '10.0.0.42 — honeypot  (open: ALL) ⚠',
+      '$ python3 exploit.py --target 10.0.0.42',
+      '[*] Initializing payload...',
+      '[*] Establishing reverse shell...',
+      '[+] Shell obtained. UID=0(root)',
+      '# whoami',
+      'root',
+      '# cat /etc/shadow | head -5',
+      'ACCESS DENIED — IDS TRIGGERED',
+      '[!] Connection terminated by remote host',
+      '$ echo "nice try honeypot"',
+      'nice try honeypot',
+      '$ uptime',
+      ' 02:33:17 up 847 days, 3:22, 1 user',
+      '$ neofetch',
+      '  ╔══════════╗  OS: HexOS 13.3.7',
+      '  ║ ▓▓▓▓▓▓▓▓ ║  Kernel: 6.6.6-hex',
+      '  ║ ▓▓▓▓▓▓▓▓ ║  Shell: zsh 5.9',
+      '  ╚══════════╝  CPU: 32x Zen5 @ 5.2GHz',
+      '                RAM: 128GB DDR5',
+      '$ _',
+    ];
+
+    const SCENES = [
+      { name: "Dashboard", path: "scenes/dashboard.json" },
+      { name: "Witch's Potion Shop", path: "scenes/witch-shop.json" },
+      { name: "Witch's Shop v2", path: "scenes/witch-shop-v2.json" },
+      { name: "Hacker Den", path: "scenes/hacker-den.json" },
+    ];
+
+    async function switchScene(scenePath) {
+      // Clean up existing Live2D
+      if (live2dApp) { live2dApp.destroy(true); live2dApp = null; }
+      live2dModel = null;
+      live2dTexture = null;
+
+      await loadScene(scenePath);
+
+      // Re-init Live2D if scene has a character layer
+      const charLayer = currentScene?.layers?.find(l => l.type === 'live2d');
+      if (charLayer) {
+        try { await initLive2D(charLayer); } catch(e) {
+          console.warn('Live2D init failed:', e.message);
+        }
+      }
+
+      // Clean up 3D terminal on scene switch
+      stopTerminal3DFeed();
+      if (termMesh) { scene.remove(termMesh); termMesh = null; }
+      if (termTexture) { termTexture.dispose(); termTexture = null; }
+      termCanvas = null; termCanvasCtx = null;
+      termLines3D = []; termLineIdx3D = 0;
+      terminalMode = 'html';
+      document.getElementById('terminal-mode-toggle').textContent = 'Terminal: HTML';
+
+      // Rebuild layer panel
+      origScales = {};
+      for (const [name, m] of Object.entries(meshes)) {
+        origScales[name] = { x: m.scale.x, y: m.scale.y };
+      }
+      if (loadLayerPrefs()) buildLayerPanel();
+      else buildLayerPanel();
+      setupTerminal(currentScene);
+      // Show toggle only for scenes with terminals
+      document.getElementById('terminal-mode-toggle').style.display =
+        currentScene?.effects?.terminal?.enabled ? 'block' : 'none';
+      setupDashboard(currentScene);
+      if (typeof updateTextRainForScene === 'function') updateTextRainForScene();
+    }
+
+    // Populate scene selector
+    const sceneSelect = document.getElementById('scene-select');
+    SCENES.forEach((s, i) => {
+      const opt = document.createElement('option');
+      opt.value = s.path;
+      opt.textContent = s.name;
+      sceneSelect.appendChild(opt);
+    });
+    sceneSelect.addEventListener('change', () => switchScene(sceneSelect.value));
+
+    // Load default scene
+    await switchScene(SCENES[0].path);
+
+    // ── Layer Editor Panel ──
+    function buildLayerPanel() {
+      const panel = document.getElementById('layer-panel');
+      if (!currentScene) return;
+      let html = '<h3>🎚 Layer Editor</h3>';
+      for (const layer of currentScene.layers) {
+        const m = meshes[layer.name];
+        if (!m) continue;
+        const id = layer.name.replace(/\s+/g, '_');
+        html += `<div class="layer-group">
+          <div class="layer-name">
+            <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer">
+              <input type="checkbox" checked onchange="toggleLayer('${layer.name}',this.checked)" style="accent-color:#8af">
+              ${layer.name}
+            </label>
+          </div>
+          <label>X <input type="range" min="-5" max="5" step="0.05" value="${m.position.x}" 
+            oninput="moveLayer('${layer.name}','x',this.value);this.nextElementSibling.textContent=this.value">
+            <span class="val">${m.position.x.toFixed(2)}</span></label>
+          <label>Y <input type="range" min="-3" max="4" step="0.05" value="${m.position.y}" 
+            oninput="moveLayer('${layer.name}','y',this.value);this.nextElementSibling.textContent=this.value">
+            <span class="val">${m.position.y.toFixed(2)}</span></label>
+          <label>Z <input type="range" min="-3" max="6" step="0.1" value="${m.position.z}" 
+            oninput="moveLayer('${layer.name}','z',this.value);this.nextElementSibling.textContent=this.value">
+            <span class="val">${m.position.z.toFixed(1)}</span></label>
+          <label>Scale <input type="range" min="0.1" max="3" step="0.05" value="1" 
+            oninput="scaleLayer('${layer.name}',this.value);this.nextElementSibling.textContent=this.value">
+            <span class="val">1.00</span></label>
+          <label>Opacity <input type="range" min="0" max="1" step="0.05" value="${m.material.opacity}" 
+            oninput="opacityLayer('${layer.name}',this.value);this.nextElementSibling.textContent=this.value">
+            <span class="val">${m.material.opacity.toFixed(2)}</span></label>
+        </div>`;
+      }
+      html += '<button class="export-btn" onclick="resetLayers()" style="background:#642;color:#fa8;border-color:#864;margin-bottom:4px">↺ Reset All Layers</button>';
+      html += '<button class="export-btn" onclick="exportPositions()">📋 Copy JSON to Clipboard</button>';
+      panel.innerHTML = html;
+    }
+
+    // Store original scales for relative scaling
+    for (const [name, m] of Object.entries(meshes)) {
+      origScales[name] = { x: m.scale.x, y: m.scale.y };
+    }
+
+    // ── Persistence ──
+    function saveLayerPrefs() {
+      if (!currentScene) return;
+      const prefs = {};
+      for (const layer of currentScene.layers) {
+        const m = meshes[layer.name];
+        if (!m) continue;
+        const o = origScales[layer.name];
+        prefs[layer.name] = {
+          x: +m.position.x.toFixed(3), y: +m.position.y.toFixed(3), z: +m.position.z.toFixed(2),
+          scaleRel: o ? +(m.scale.x / o.x).toFixed(3) : 1,
+          opacity: +m.material.opacity.toFixed(2),
+          visible: m.visible,
+        };
+      }
+      const key = STORAGE_PREFIX + (currentScene.name || 'unknown');
+      localStorage.setItem(key, JSON.stringify(prefs));
+      console.log('[Prefs] Saved:', key);
+    }
+
+    function loadLayerPrefs() {
+      if (!currentScene) return false;
+      const key = STORAGE_PREFIX + (currentScene.name || 'unknown');
+      const raw = localStorage.getItem(key);
+      if (!raw) return false;
+      try {
+        const prefs = JSON.parse(raw);
+        for (const [name, p] of Object.entries(prefs)) {
+          const m = meshes[name];
+          if (!m) continue;
+          if (p.x != null) m.position.x = p.x;
+          if (p.y != null) m.position.y = p.y;
+          if (p.z != null) m.position.z = p.z;
+          if (p.opacity != null) m.material.opacity = p.opacity;
+          if (p.visible != null) m.visible = p.visible;
+          if (p.scaleRel != null && origScales[name]) {
+            m.scale.set(origScales[name].x * p.scaleRel, origScales[name].y * p.scaleRel, 1);
+          }
+        }
+        console.log('[Prefs] Loaded:', key);
+        return true;
+      } catch { return false; }
+    }
+
+    // Debounced auto-save
+    let saveTimeout = null;
+    function scheduleSave() {
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(saveLayerPrefs, 500);
+    }
+
+    window.toggleLayer = (name, visible) => {
+      const m = meshes[name];
+      if (m) { m.visible = visible; scheduleSave(); }
+    };
+
+    window.moveLayer = (name, axis, val) => {
+      const m = meshes[name];
+      if (m) { m.position[axis] = parseFloat(val); scheduleSave(); }
+    };
+
+    window.scaleLayer = (name, val) => {
+      const m = meshes[name];
+      const o = origScales[name];
+      if (m && o) {
+        const s = parseFloat(val);
+        m.scale.set(o.x * s, o.y * s, 1);
+        scheduleSave();
+      }
+    };
+
+    window.opacityLayer = (name, val) => {
+      const m = meshes[name];
+      if (m) { m.material.opacity = parseFloat(val); scheduleSave(); }
+    };
+
+    // Store original positions for reset
+    const origPositions = {};
+    for (const layer of currentScene.layers) {
+      const m = meshes[layer.name];
+      if (m) origPositions[layer.name] = { x: m.position.x, y: m.position.y, z: m.position.z, opacity: m.material.opacity };
+    }
+
+    window.resetLayers = () => {
+      for (const layer of currentScene.layers) {
+        const m = meshes[layer.name];
+        const o = origPositions[layer.name];
+        const os = origScales[layer.name];
+        if (!m || !o) continue;
+        m.position.set(o.x, o.y, o.z);
+        m.material.opacity = o.opacity;
+        m.visible = true;
+        if (os) m.scale.set(os.x, os.y, 1);
+      }
+      // Clear saved prefs
+      if (currentScene) localStorage.removeItem(STORAGE_PREFIX + (currentScene.name || 'unknown'));
+      buildLayerPanel();
+    };
+
+    window.exportPositions = () => {
+      const out = {};
+      for (const layer of currentScene.layers) {
+        const m = meshes[layer.name];
+        if (!m) continue;
+        out[layer.name] = {
+          x: +m.position.x.toFixed(2),
+          y: +m.position.y.toFixed(2),
+          z: +m.position.z.toFixed(1),
+          scaleX: +m.scale.x.toFixed(3),
+          scaleY: +m.scale.y.toFixed(3),
+          opacity: +m.material.opacity.toFixed(2),
+        };
+      }
+      const json = JSON.stringify(out, null, 2);
+      navigator.clipboard.writeText(json).then(() => {
+        const btn = document.querySelector('.export-btn');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = '📋 Copy JSON to Clipboard', 1500);
+      });
+      console.log('Layer positions:', json);
+    };
+
+    buildLayerPanel();
+
+    // ── Terminal Overlay ──
+    function setupTerminal(sceneData) {
+      // Clean up previous
+      if (terminalInterval) { clearInterval(terminalInterval); terminalInterval = null; }
+      terminalEl.style.display = 'none';
+      terminalContent.innerHTML = '';
+
+      const fx = sceneData.effects?.terminal;
+      if (!fx?.enabled) return;
+
+      const screen = fx.screen?.imgRect;
+      if (!screen) return;
+
+      // Style terminal
+      terminalContent.style.fontFamily = fx.font || 'monospace';
+      terminalContent.style.fontSize = (fx.fontSize || 11) + 'px';
+      terminalContent.style.color = fx.color || '#33ff33';
+      terminalContent.style.background = fx.bgColor || 'rgba(0,5,0,0.85)';
+      terminalContent.style.lineHeight = '1.3';
+      terminalContent.style.whiteSpace = 'pre';
+      terminalEl.style.borderRadius = '2px';
+
+      // Store screen rect for projection in animation loop
+      terminalEl._screenRect = screen; // [left, top, right, bottom] in image pixels
+      terminalEl.style.display = 'block';
+
+      // Start feeding lines
+      let lineIdx = 0;
+      const maxLines = 12;
+      const lines = [];
+      terminalInterval = setInterval(() => {
+        lines.push(HACKER_LINES[lineIdx % HACKER_LINES.length]);
+        if (lines.length > maxLines) lines.shift();
+        terminalContent.textContent = lines.join('\n');
+        lineIdx++;
+      }, fx.scrollSpeed || 80);
+
+      console.log('Terminal overlay active');
+    }
+
+    // Project CRT screen rect to CSS position each frame
+    function updateTerminalPosition() {
+      if (!terminalEl._screenRect || terminalEl.style.display === 'none') return;
+      const bgMesh = meshes['background'];
+      if (!bgMesh) return;
+
+      const [imgL, imgT, imgR, imgB] = terminalEl._screenRect;
+      const imgW = 1536, imgH = 1024;
+      
+      // Convert image pixel coords to mesh local coords (-0.5 to 0.5)
+      // Then to world coords via mesh position and scale
+      const meshW = bgMesh.geometry.parameters.width;
+      const meshH = bgMesh.geometry.parameters.height;
+
+      // Image coords to normalized (0-1), then to mesh local (-w/2 to w/2)
+      const localL = (imgL / imgW - 0.5) * meshW;
+      const localR = (imgR / imgW - 0.5) * meshW;
+      const localT = (0.5 - imgT / imgH) * meshH; // flip Y
+      const localB = (0.5 - imgB / imgH) * meshH;
+
+      // To world coords
+      const worldTL = new THREE.Vector3(localL + bgMesh.position.x, localT + bgMesh.position.y, bgMesh.position.z);
+      const worldBR = new THREE.Vector3(localR + bgMesh.position.x, localB + bgMesh.position.y, bgMesh.position.z);
+
+      // Project to screen
+      worldTL.project(camera);
+      worldBR.project(camera);
+
+      const hw = window.innerWidth / 2;
+      const hh = window.innerHeight / 2;
+      const cssL = (worldTL.x * hw) + hw;
+      const cssT = -(worldTL.y * hh) + hh;
+      const cssR = (worldBR.x * hw) + hw;
+      const cssB = -(worldBR.y * hh) + hh;
+
+      terminalEl.style.left = cssL + 'px';
+      terminalEl.style.top = cssT + 'px';
+      terminalEl.style.width = (cssR - cssL) + 'px';
+      terminalEl.style.height = (cssB - cssT) + 'px';
+    }
+
+    setupTerminal(currentScene);
+
+    // ── Three.js Terminal (Canvas Texture Variation) ──
+    function initTerminal3D() {
+      if (termCanvas) return; // already inited
+
+      // Offscreen canvas
+      termCanvas = document.createElement('canvas');
+      termCanvas.width = TERM3D_W;
+      termCanvas.height = TERM3D_H;
+      termCanvasCtx = termCanvas.getContext('2d');
+
+      // Three.js texture + plane
+      termTexture = new THREE.CanvasTexture(termCanvas);
+      termTexture.minFilter = THREE.LinearFilter;
+      termTexture.magFilter = THREE.LinearFilter;
+
+      // Position: to Haru's right (screen right), same Z as character or slightly behind
+      const charMesh = meshes['character'];
+      const planeW = 2.0, planeH = 1.5;
+      const geo = new THREE.PlaneGeometry(planeW, planeH);
+      const mat = new THREE.MeshBasicMaterial({
+        map: termTexture,
+        transparent: true,
+        side: THREE.DoubleSide,
+      });
+      termMesh = new THREE.Mesh(geo, mat);
+
+      // Place to right of character, same depth
+      const cx = charMesh ? charMesh.position.x : 0;
+      const cy = charMesh ? charMesh.position.y : 0.5;
+      const cz = charMesh ? charMesh.position.z : 2;
+      termMesh.position.set(cx + 1.8, cy - 0.3, cz - 0.5); // slightly behind character
+      termMesh.name = 'terminal-3d';
+      termMesh.visible = false; // hidden by default
+      scene.add(termMesh);
+      meshes['terminal-3d'] = termMesh;
+    }
+
+    function startTerminal3DFeed() {
+      if (termInterval3D) return;
+      termLines3D = []; termLineIdx3D = 0;
+      termInterval3D = setInterval(() => {
+        termLines3D.push(HACKER_LINES[termLineIdx3D % HACKER_LINES.length]);
+        if (termLines3D.length > TERM3D_MAX_LINES) termLines3D.shift();
+        termLineIdx3D++;
+        renderTerminal3D();
+      }, 80);
+    }
+
+    function renderTerminal3D() {
+      if (!termCanvasCtx) return;
+      const ctx = termCanvasCtx;
+      const w = TERM3D_W, h = TERM3D_H;
+
+      // Background
+      ctx.fillStyle = 'rgba(0, 5, 0, 0.95)';
+      ctx.fillRect(0, 0, w, h);
+
+      // Scanlines
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < h; y += 3) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Text
+      ctx.font = '14px monospace';
+      ctx.fillStyle = '#33ff33';
+      const lineH = 20;
+      const padX = 8, padY = 14;
+      for (let i = 0; i < termLines3D.length; i++) {
+        ctx.fillText(termLines3D[i], padX, padY + i * lineH);
+      }
+
+      // CRT glow edge vignette
+      const grad = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)*0.3, w/2, h/2, Math.max(w,h)*0.7);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Mark texture dirty
+      if (termTexture) termTexture.needsUpdate = true;
+    }
+
+    window.toggleTerminalMode = function() {
+      const fx = currentScene?.effects?.terminal;
+      if (!fx?.enabled) return; // no terminal in this scene
+
+      if (terminalMode === 'html') {
+        terminalMode = 'threejs';
+        // Hide HTML overlay completely
+        terminalEl.style.display = 'none';
+        terminalEl.style.visibility = 'hidden';
+        terminalContent.innerHTML = '';
+        if (terminalInterval) { clearInterval(terminalInterval); terminalInterval = null; }
+        // Show Three.js plane
+        initTerminal3D();
+        termMesh.visible = true;
+        startTerminal3DFeed();
+      } else {
+        terminalMode = 'html';
+        // Hide Three.js plane
+        if (termMesh) termMesh.visible = false;
+        stopTerminal3DFeed();
+        // Restore HTML overlay
+        terminalEl.style.visibility = 'visible';
+        setupTerminal(currentScene);
+      }
+
+      document.getElementById('terminal-mode-toggle').textContent =
+        'Terminal: ' + (terminalMode === 'html' ? 'HTML' : '3D');
+    };
+
+    // ══════════════════════════════════════
+    // ── Dashboard Log Panels (Canvas Tex) ──
+    // ══════════════════════════════════════
+    let dashSysCanvas = null, dashSysCtx = null, dashSysTex = null;
+    let dashChatCanvas = null, dashChatCtx = null, dashChatTex = null;
+    let dashSysLines = [], dashChatLines = [];
+    let dashWs = null;
+    const DASH_W = 512, DASH_H = 720;
+
+    function initDashboardPanel(cfg, layerName) {
+      const canvas = document.createElement('canvas');
+      canvas.width = DASH_W;
+      canvas.height = DASH_H;
+      const ctx = canvas.getContext('2d');
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+
+      // Apply to existing mesh
+      const mesh = meshes[layerName];
+      if (mesh) {
+        mesh.material.dispose();
+        mesh.material = new THREE.MeshBasicMaterial({
+          map: tex,
+          transparent: true,
+          side: THREE.DoubleSide,
+        });
+      }
+      return { canvas, ctx, tex };
+    }
+
+    function renderDashPanel(ctx, tex, lines, cfg) {
+      const w = DASH_W, h = DASH_H;
+      // Background
+      ctx.fillStyle = cfg.bgColor || 'rgba(0,0,0,0.9)';
+      ctx.fillRect(0, 0, w, h);
+
+      // Scanlines
+      ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < h; y += 3) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      // Header
+      ctx.font = 'bold 13px monospace';
+      ctx.fillStyle = cfg.color || '#4ade80';
+      ctx.fillText('▸ ' + (cfg.header || 'LOG'), 10, 20);
+      ctx.strokeStyle = cfg.dimColor || '#333';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(8, 28); ctx.lineTo(w - 8, 28); ctx.stroke();
+
+      // Lines
+      ctx.font = cfg.font || '11px monospace';
+      const lineH = 16;
+      const padX = 8, startY = 42;
+      const maxVisible = Math.floor((h - startY - 10) / lineH);
+      const visible = lines.slice(-maxVisible);
+
+      for (let i = 0; i < visible.length; i++) {
+        const line = visible[i];
+        const y = startY + i * lineH;
+
+        if (line.highlight) {
+          ctx.fillStyle = cfg.color || '#4ade80';
+        } else {
+          ctx.fillStyle = cfg.dimColor || '#2a6a40';
+        }
+
+        // Truncate long lines
+        const text = line.text.length > 55 ? line.text.slice(0, 55) + '…' : line.text;
+        ctx.fillText(text, padX, y);
+      }
+
+      // Edge glow
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(0.95, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.5)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      tex.needsUpdate = true;
+    }
+
+    function setupDashboard(sceneData) {
+      // Cleanup previous
+      if (dashWs) { dashWs.close(); dashWs = null; }
+      dashSysLines = []; dashChatLines = [];
+
+      const dash = sceneData?.effects?.dashboard;
+      if (!dash?.enabled) return;
+
+      const sysCfg = dash.sysLog;
+      const chatCfg = dash.chatLog;
+
+      // Init canvases
+      const sys = initDashboardPanel(sysCfg, sysCfg.layer);
+      dashSysCanvas = sys.canvas; dashSysCtx = sys.ctx; dashSysTex = sys.tex;
+
+      const chat = initDashboardPanel(chatCfg, chatCfg.layer);
+      dashChatCanvas = chat.canvas; dashChatCtx = chat.ctx; dashChatTex = chat.tex;
+
+      // Initial render
+      renderDashPanel(dashSysCtx, dashSysTex, dashSysLines, sysCfg);
+      renderDashPanel(dashChatCtx, dashChatTex, dashChatLines, chatCfg);
+
+      // Add placeholder content so panels aren't blank
+      dashSysLines.push({ text: 'Connecting to log server...', highlight: true });
+      dashChatLines.push({ text: 'Waiting for gateway events...', highlight: true });
+      renderDashPanel(dashSysCtx, dashSysTex, dashSysLines, sysCfg);
+      renderDashPanel(dashChatCtx, dashChatTex, dashChatLines, chatCfg);
+
+      // Connect to log server
+      const maxLines = sysCfg.maxLines || 40;
+      const logServerUrl = dash.logServer === '__USE_HOSTNAME__'
+        ? `ws://${location.hostname}:8093`
+        : dash.logServer;
+      function connectDashWs() {
+        try {
+          dashWs = new WebSocket(logServerUrl);
+        } catch { setTimeout(connectDashWs, 3000); return; }
+
+        dashWs.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.channel === 'sys') {
+              // Parse the JSON log line for display
+              let displayText = data.line;
+              let highlight = false;
+              try {
+                const j = JSON.parse(data.line);
+                const time = j.time ? new Date(j.time).toLocaleTimeString('en-US', { hour12: false }) : '';
+                const sub = (j['0'] || '').replace(/[{}"]/g, '').replace('subsystem:', '');
+                const msg = (j['1'] || '');
+                const level = (j._meta?.logLevelName || '').toLowerCase();
+                highlight = level === 'error' || level === 'warn';
+                displayText = `${time} [${sub}] ${msg}`;
+              } catch {}
+              dashSysLines.push({ text: displayText.slice(0, 200), highlight });
+              while (dashSysLines.length > maxLines) dashSysLines.shift();
+              renderDashPanel(dashSysCtx, dashSysTex, dashSysLines, sysCfg);
+              // Also feed into text rain
+              if (typeof feedTextRain === 'function') feedTextRain(displayText.slice(0, 70));
+            }
+            if (data.channel === 'chat') {
+              const d = data.data || {};
+              const role = d.role || 'system';
+              const label = role === 'user' ? 'ERIC' : role === 'assistant' ? 'DIANE' : 'SYS';
+              const time = d.time ? new Date(d.time).toLocaleTimeString('en-US', { hour12: false }) : '';
+              const text = `${time} ${label}: ${(d.text || '').slice(0, 200)}`;
+              const highlight = role === 'user' || role === 'assistant';
+              dashChatLines.push({ text, highlight });
+              while (dashChatLines.length > maxLines) dashChatLines.shift();
+              renderDashPanel(dashChatCtx, dashChatTex, dashChatLines, chatCfg);
+            }
+          } catch {}
+        };
+
+        dashWs.onclose = () => setTimeout(connectDashWs, 3000);
+        dashWs.onerror = () => dashWs.close();
+      }
+      connectDashWs();
+      console.log('[Dashboard] Log panels initialized, connecting to', dash.logServer);
+    }
+
+    // ── Animation Loop ──
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Update Live2D texture
+      if (live2dTexture) {
+        live2dTexture.needsUpdate = true;
+      }
+
+      // Animate rain if present
+      if (rain && rain._bounds) {
+        const pos = rain.geometry.attributes.position;
+        const wind = rain._windFactor || 0.05;
+        const b = rain._bounds;
+        for (let i = 0; i < rainVelocities.length; i++) {
+          pos.array[i * 3 + 1] -= rainVelocities[i];
+          pos.array[i * 3] -= rainVelocities[i] * wind;
+          // Respawn at top of window when particle falls below
+          if (pos.array[i * 3 + 1] < b.yMin) {
+            pos.array[i * 3 + 1] = b.yMax;
+            pos.array[i * 3] = b.xMin + Math.random() * (b.xMax - b.xMin);
+          }
+        }
+        pos.needsUpdate = true;
+      }
+
+      updateTerminalPosition();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ── Controls ──
+    window.resetCamera = () => {
+      camera.position.set(0, 0.5, 6);
+      camera.lookAt(0, 0.5, 0);
+    };
+
+    window.toggleWireframe = () => {
+      wireframeMode = !wireframeMode;
+      for (const m of Object.values(meshes)) {
+        m.material.wireframe = wireframeMode;
+      }
+    };
+
+    window.nudgeCamera = (dir) => {
+      const step = 0.3;
+      switch(dir) {
+        case 'in': camera.position.z -= step; break;
+        case 'out': camera.position.z += step; break;
+        case 'left': camera.position.x -= step; break;
+        case 'right': camera.position.x += step; break;
+        case 'up': camera.position.y += step; break;
+        case 'down': camera.position.y -= step; break;
+      }
+      camera.lookAt(0, 0.5, 0);
+    };
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      switch(e.key) {
+        case 'w': case 'ArrowUp': nudgeCamera('up'); break;
+        case 's': case 'ArrowDown': nudgeCamera('down'); break;
+        case 'a': case 'ArrowLeft': nudgeCamera('left'); break;
+        case 'd': case 'ArrowRight': nudgeCamera('right'); break;
+      }
+    });
+
+    // Scroll to zoom
+    window.addEventListener('wheel', (e) => {
+      camera.position.z += e.deltaY * 0.005;
+      camera.position.z = Math.max(2, Math.min(12, camera.position.z));
+      camera.lookAt(0, 0.5, 0);
+    });
+
+    // Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ══════════════════════════════════════════════
+    // ── Gateway Chat Client + Haru State Machine ──
+    // ══════════════════════════════════════════════
+
+    // Config — read from URL params or defaults
+    const params = new URLSearchParams(location.search);
+    const GW_URL = params.get('gw') || `ws://${location.hostname}:18789`;
+    const GW_TOKEN = params.get('token') || '';
+    const SESSION_KEY = params.get('session') || 'agent:main:discord:channel:1470321461808861204';
+
+    const chatInput = document.getElementById('chat-input');
+    const chatStatus = document.getElementById('chat-status');
+    const speechBubble = document.getElementById('speech-bubble');
+    const haruStateEl = document.getElementById('haru-state');
+
+    // ── Haru State Machine ──
+    // States: idle → sleeping (after IDLE_TIMEOUT)
+    //         idle/sleeping → thinking (user sent message, waiting for response)
+    //         thinking → talking (first delta arrives)
+    //         talking → idle (after SPEECH_LINGER)
+    //         sleeping → waking → thinking (wake animation before thinking)
+    const IDLE_TIMEOUT = 120000;   // 2min before she sleeps
+    const WAKE_DURATION = 1500;    // wave animation duration
+    const SPEECH_LINGER = 4000;    // how long bubble stays after response ends
+    const THINKING_TIMEOUT = 30000; // max time in thinking before giving up
+
+    let haruState = 'idle';   // idle | sleeping | waking | thinking | talking
+    let lastActivityTime = Date.now();
+    let sleepTimer = null;
+    let speechTimer = null;
+    let thinkingTimer = null;
+
+    function setHaruState(state) {
+      if (haruState === state) return;
+      const prev = haruState;
+      console.log(`[Haru] ${prev} → ${state}`);
+      haruState = state;
+      if (typeof feedTextRain === 'function') feedTextRain(`[live2d] state ${prev}→${state}`);
+      const labels = { 
+        idle: '😊 idle', sleeping: '😴 sleeping', waking: '👋 waking', 
+        thinking: '🤔 thinking', talking: '💬 talking' 
+      };
+      haruStateEl.textContent = labels[state] || state;
+      
+      if (!live2dModel) return;
+      
+      switch (state) {
+        case 'idle':
+          live2dModel.expression('F01');  // neutral smile
+          live2dModel.motion('Idle', 0);  // gentle idle
+          break;
+        case 'sleeping':
+          live2dModel.expression('F05');  // eyes closed / sleepy
+          break;
+        case 'waking':
+          live2dModel.expression('F03');  // surprised/alert
+          live2dModel.motion('TapBody', 0);  // wave
+          setTimeout(() => {
+            if (haruState === 'waking') setHaruState('thinking');
+          }, WAKE_DURATION);
+          break;
+        case 'thinking':
+          live2dModel.expression('F04');  // thoughtful/focused
+          showThinkingBubble();
+          // Safety timeout
+          if (thinkingTimer) clearTimeout(thinkingTimer);
+          thinkingTimer = setTimeout(() => {
+            if (haruState === 'thinking') {
+              hideSpeechBubble();
+              setHaruState('idle');
+            }
+          }, THINKING_TIMEOUT);
+          break;
+        case 'talking':
+          if (thinkingTimer) { clearTimeout(thinkingTimer); thinkingTimer = null; }
+          live2dModel.expression('F01');  // engaged smile
+          // Play a random TapBody motion for variety
+          const motionIdx = Math.floor(Math.random() * 4);
+          live2dModel.motion('TapBody', motionIdx);
+          break;
+      }
+    }
+
+    function resetIdleTimer() {
+      lastActivityTime = Date.now();
+      if (sleepTimer) clearTimeout(sleepTimer);
+      sleepTimer = setTimeout(() => {
+        if (haruState === 'idle') setHaruState('sleeping');
+      }, IDLE_TIMEOUT);
+    }
+
+    function positionBubble() {
+      const charMesh = meshes['character'];
+      if (!charMesh) return;
+      const headWorld = new THREE.Vector3(
+        charMesh.position.x,
+        charMesh.position.y + (charMesh.geometry.parameters.height / 2) * 0.8,
+        charMesh.position.z
+      );
+      headWorld.project(camera);
+      const hw = window.innerWidth / 2;
+      const hh = window.innerHeight / 2;
+      const sx = (headWorld.x * hw) + hw;
+      const sy = -(headWorld.y * hh) + hh;
+      speechBubble.style.left = Math.max(10, Math.min(sx - 200, window.innerWidth - 420)) + 'px';
+      speechBubble.style.top = Math.max(10, sy - 60) + 'px';
+    }
+
+    function showThinkingBubble() {
+      speechBubble.innerHTML = '<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+      positionBubble();
+      speechBubble.classList.add('visible');
+    }
+
+    function showSpeechBubble(text) {
+      speechBubble.textContent = text;
+      positionBubble();
+      speechBubble.classList.add('visible');
+    }
+
+    function hideSpeechBubble() {
+      speechBubble.classList.remove('visible');
+    }
+
+    // ── Gateway WebSocket Client ──
+    let ws = null;
+    let wsConnected = false;
+    let pendingRequests = new Map();
+    let currentRunId = null;
+    let streamBuffer = '';
+    let reconnectTimer = null;
+    let reconnectDelay = 1000;
+
+    function uuid() {
+      return crypto.randomUUID?.() || 
+        'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          const r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+    }
+
+    function gwRequest(method, params) {
+      return new Promise((resolve, reject) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          reject(new Error('not connected'));
+          return;
+        }
+        const id = uuid();
+        pendingRequests.set(id, { resolve, reject });
+        ws.send(JSON.stringify({ type: 'req', id, method, params }));
+        // Timeout after 30s
+        setTimeout(() => {
+          if (pendingRequests.has(id)) {
+            pendingRequests.delete(id);
+            reject(new Error('request timeout'));
+          }
+        }, 30000);
+      });
+    }
+
+    function connectGateway() {
+      if (ws) { ws.close(); ws = null; }
+      
+      chatStatus.textContent = '●  connecting...';
+      chatStatus.style.color = '#aa8';
+      
+      ws = new WebSocket(GW_URL);
+      
+      ws.addEventListener('open', () => {
+        console.log('[GW] WebSocket open, waiting for challenge...');
+      });
+      
+      ws.addEventListener('message', (evt) => {
+        let msg;
+        try { msg = JSON.parse(evt.data); } catch { return; }
+        
+        // Handle events
+        if (msg.type === 'event') {
+          if (msg.event === 'connect.challenge') {
+            // Send connect
+            const connectParams = {
+              minProtocol: 3, maxProtocol: 3,
+              client: { id: 'openclaw-control-ui', version: '0.1', platform: 'web', mode: 'webchat' },
+              role: 'operator',
+              scopes: ['operator.admin', 'operator.read', 'operator.write', 'operator.approvals'],
+              caps: [],
+              auth: GW_TOKEN ? { token: GW_TOKEN } : undefined,
+              userAgent: 'haru-diorama/0.1',
+            };
+            gwRequest('connect', connectParams).then(res => {
+              wsConnected = true;
+              reconnectDelay = 1000;
+              chatStatus.textContent = '●  connected';
+              chatStatus.style.color = '#6a6';
+              console.log('[GW] Connected. Auth:', JSON.stringify(res?.auth), 'Policy:', JSON.stringify(res?.policy));
+              // Start idle timer
+              resetIdleTimer();
+              setHaruState('idle');
+            }).catch(err => {
+              console.error('[GW] Connect failed:', err);
+              chatStatus.textContent = '●  auth failed';
+              chatStatus.style.color = '#a44';
+            });
+          }
+          
+          // Feed gateway events into text rain as realistic log lines
+          if (typeof feedTextRain === 'function') {
+            const p = msg.payload || {};
+            const ev = msg.event;
+            if (ev === 'chat') {
+              const sk = (p.sessionKey || '').split(':').slice(-1)[0];
+              feedTextRain(`[gw] chat.${p.state||'?'} session=…${sk} ${p.runId ? 'run='+p.runId.slice(0,6) : ''}`);
+            } else if (ev === 'session') {
+              feedTextRain(`[gw] session.${p.state||ev} key=${(p.sessionKey||'').slice(0,30)}`);
+            } else {
+              feedTextRain(`[gw] event ${ev} ${JSON.stringify(p).slice(0,60)}`);
+            }
+          }
+
+          if (msg.event === 'chat') {
+            console.log('[GW] Chat event:', JSON.stringify(msg.payload?.state), 
+              'session:', msg.payload?.sessionKey,
+              'msg:', JSON.stringify(msg.payload?.message)?.slice(0, 300));
+            handleChatEvent(msg.payload);
+            // Also feed into dashboard chat panel directly from gateway
+            if (msg.payload?.state === 'delta' && dashChatLines) {
+              const p = msg.payload;
+              const msgContent = typeof p.message === 'string' ? p.message :
+                (p.message?.content ? (typeof p.message.content === 'string' ? p.message.content :
+                  p.message.content.filter(c=>c.type==='text').map(c=>c.text).join(' ')) : '');
+              if (msgContent) {
+                const time = new Date().toLocaleTimeString('en-US',{hour12:false});
+                dashChatLines.push({ text: `${time} DIANE: ${msgContent.slice(-120)}`, highlight: true });
+                while (dashChatLines.length > 40) dashChatLines.shift();
+                const dash = currentScene?.effects?.dashboard;
+                if (dash && dashChatCtx && dashChatTex) renderDashPanel(dashChatCtx, dashChatTex, dashChatLines, dash.chatLog);
+              }
+            }
+          }
+          return;
+        }
+        
+        // Handle responses
+        if (msg.type === 'res') {
+          const pending = pendingRequests.get(msg.id);
+          if (pending) {
+            pendingRequests.delete(msg.id);
+            msg.ok ? pending.resolve(msg.payload) : pending.reject(new Error(msg.error?.message || 'request failed'));
+          }
+        }
+      });
+      
+      ws.addEventListener('close', (evt) => {
+        wsConnected = false;
+        chatStatus.textContent = `●  disconnected (${evt.code})`;
+        chatStatus.style.color = '#a44';
+        pendingRequests.forEach(p => p.reject(new Error('disconnected')));
+        pendingRequests.clear();
+        // Reconnect
+        if (!reconnectTimer) {
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            connectGateway();
+          }, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 1.5, 15000);
+        }
+      });
+      
+      ws.addEventListener('error', () => {});
+    }
+
+    function handleChatEvent(payload) {
+      if (!payload) return;
+      // Match session key (exact or contains)
+      const sk = payload.sessionKey || '';
+      if (sk !== SESSION_KEY && !sk.includes(SESSION_KEY) && !SESSION_KEY.includes(sk)) return;
+      
+      if (payload.state === 'delta') {
+        // Extract text from message
+        const msg = payload.message;
+        let text = '';
+        if (typeof msg === 'string') text = msg;
+        else if (msg?.content) {
+          if (typeof msg.content === 'string') text = msg.content;
+          else if (Array.isArray(msg.content)) {
+            text = msg.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+          }
+        }
+        if (text) {
+          streamBuffer = text;
+          // Transition from thinking → talking on first real content
+          if (haruState === 'thinking' || haruState === 'waking') {
+            setHaruState('talking');
+          }
+          // Truncate for speech bubble (show last ~300 chars)
+          const display = text.length > 300 ? '…' + text.slice(-300) : text;
+          showSpeechBubble(display);
+          // Feed actual Claude response text into the rain
+          if (typeof feedTextRain === 'function') {
+            // Split into ~60 char lines for rain columns
+            const lines = text.split('\n').filter(l => l.trim());
+            const lastLines = lines.slice(-3);
+            lastLines.forEach(l => feedTextRain('[claude] ' + l.trim().slice(0, 70)));
+          }
+        }
+      }
+      
+      if (payload.state === 'final') {
+        currentRunId = null;
+        // Keep bubble visible, then fade to idle
+        if (speechTimer) clearTimeout(speechTimer);
+        speechTimer = setTimeout(() => {
+          if (currentRunId) return;  // new message came in during linger
+          hideSpeechBubble();
+          setHaruState('idle');
+          resetIdleTimer();
+        }, SPEECH_LINGER);
+      }
+      
+      if (payload.state === 'error' || payload.state === 'aborted') {
+        currentRunId = null;
+        streamBuffer = '';
+        hideSpeechBubble();
+        setHaruState('idle');
+        resetIdleTimer();
+      }
+    }
+
+    // ── Send Chat Message ──
+    window.sendChat = async function() {
+      const text = chatInput.value.trim();
+      if (!text || !wsConnected) return;
+      chatInput.value = '';
+      
+      // Wake or start thinking
+      if (haruState === 'sleeping') {
+        setHaruState('waking');  // waking → thinking automatically
+      } else {
+        setHaruState('thinking');
+      }
+      resetIdleTimer();
+      streamBuffer = '';
+      
+      const runId = uuid();
+      currentRunId = runId;
+      
+      try {
+        await gwRequest('chat.send', {
+          sessionKey: SESSION_KEY,
+          message: text,
+          deliver: false,
+          idempotencyKey: runId,
+        });
+      } catch (err) {
+        console.error('[Chat] Send failed:', err);
+        showSpeechBubble('(connection error)');
+        setTimeout(hideSpeechBubble, 2000);
+        setHaruState('idle');
+      }
+    };
+
+    // Enter to send
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+      // Don't let WASD controls fire when typing
+      e.stopPropagation();
+    });
+
+    // Connect on load
+    if (GW_TOKEN) {
+      connectGateway();
+    } else {
+      chatStatus.textContent = '●  no token — add ?token=xxx&gw=ws://host:port to URL';
+      chatStatus.style.color = '#a84';
+    }
+
+    // Init idle timer
+    resetIdleTimer();
+
+    // ══════════════════════════════
+    // ── Text Rain (Matrix-style) ──
+    // ══════════════════════════════
+    const trCtx = textRainCanvas.getContext('2d');
+    let textRainEnabled = false;
+    let textRainColumns = [];
+    let textRainFeed = [];  // log lines to use as source text
+
+    // Default log lines — shown when not connected to gateway
+    // Styled as real OpenClaw gateway/agent logs
+    const DEFAULT_RAIN_LINES = [
+      '[gw] ws.connect proto=3 client=openclaw-control-ui',
+      '[gw] auth.verify token=•••••• scope=operator.write',
+      '[agent] session.resume key=agent:main:discord',
+      '[agent] model.invoke anthropic/claude-opus-4 tokens=2847',
+      '[agent] tool.call read {path:"SOUL.md"}',
+      '[agent] tool.call memory_search {query:"preferences"}',
+      '[agent] tool.result 1247 chars',
+      '[gw] chat.delta session=agent:main run=a3f8c2',
+      '[gw] chat.final session=agent:main tokens_used=3841',
+      '[agent] thinking... depth=2 branches=3',
+      '[agent] tool.call exec {cmd:"npx vite build"}',
+      '[gw] event connect.challenge nonce=x8f2a9',
+      '[agent] stream.chunk 142 bytes delta',
+      '[live2d] expression(F04) // thinking',
+      '[live2d] motion(TapBody,2) // talking',
+      '[three] texture.update live2d canvas 512x768',
+      '[diorama] scene.load hacker-den 5 layers',
+      '[ws] heartbeat ping rtt=12ms',
+      '[agent] tool.call web_search {q:"pixel art"}',
+      '[gw] session.list active=3 idle=12',
+      '[agent] model.invoke tokens_in=1893 tokens_out=446',
+      '[gw] chat.send deliver=false idempotency=b7c1e4',
+      '[agent] setHaruState idle→thinking',
+      '[rain] feed 23 lines buffer=47/50',
+    ];
+
+    function initTextRain() {
+      textRainCanvas.width = window.innerWidth;
+      textRainCanvas.height = window.innerHeight;
+      const fontSize = 13;
+      const cols = Math.floor(textRainCanvas.width / fontSize);
+      textRainColumns = Array.from({ length: cols }, () => ({
+        y: Math.random() * textRainCanvas.height,
+        speed: 0.3 + Math.random() * 1.5,
+        char: '',
+        charIdx: 0,
+        line: '',
+        cooldown: Math.random() * 200,
+      }));
+      textRainEnabled = true;
+    }
+
+    function pickRainLine() {
+      const pool = textRainFeed.length > 0 ? textRainFeed : DEFAULT_RAIN_LINES;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function drawTextRain() {
+      if (!textRainEnabled) return;
+      const ctx = trCtx;
+      const w = textRainCanvas.width;
+      const h = textRainCanvas.height;
+      const fontSize = 13;
+
+      // Fade effect
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.font = fontSize + 'px monospace';
+
+      for (const col of textRainColumns) {
+        if (col.cooldown > 0) { col.cooldown--; continue; }
+
+        // Pick new line if needed
+        if (!col.line || col.charIdx >= col.line.length) {
+          col.line = pickRainLine();
+          col.charIdx = 0;
+          col.y = -fontSize;
+          col.speed = 0.5 + Math.random() * 1.5;
+          col.cooldown = Math.floor(Math.random() * 60);
+          continue;
+        }
+
+        const ch = col.line[col.charIdx];
+        const x = textRainColumns.indexOf(col) * fontSize;
+
+        // Bright head character
+        ctx.fillStyle = '#4f4';
+        ctx.fillText(ch, x, col.y);
+
+        // Dimmer trail
+        ctx.fillStyle = 'rgba(0, 180, 0, 0.3)';
+        ctx.fillText(ch, x, col.y - fontSize);
+
+        col.y += fontSize * col.speed;
+        col.charIdx++;
+
+        // Reset when off screen
+        if (col.y > h + fontSize * 2) {
+          col.line = '';
+          col.cooldown = Math.floor(Math.random() * 120);
+        }
+      }
+    }
+
+    // Feed real log lines into the rain
+    feedTextRain = function(line) {
+      textRainFeed.push(line);
+      if (textRainFeed.length > 50) textRainFeed.shift();
+    };
+
+    // Enable text rain only for hacker den
+    updateTextRainForScene = function() {
+      // Disabled — too distracting. Re-enable with ?rain=1 URL param
+      const forceRain = new URLSearchParams(location.search).get('rain') === '1';
+      const isHacker = forceRain && currentScene?.name?.toLowerCase().includes('hacker');
+      textRainCanvas.style.display = isHacker ? 'block' : 'none';
+      if (isHacker && !textRainEnabled) initTextRain();
+      if (!isHacker) textRainEnabled = false;
+    }
+    updateTextRainForScene();
+
+    // Text rain animation loop
+    (function textRainLoop() {
+      requestAnimationFrame(textRainLoop);
+      drawTextRain();
+    })();
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+      if (textRainEnabled) {
+        textRainCanvas.width = window.innerWidth;
+        textRainCanvas.height = window.innerHeight;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+---
+// Wraps a single project page: title, status, links, then the write-up body.
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  summary?: string;
+  status?: string;
+  link?: string;
+  repo?: string;
+}
+const { title, summary, status, link, repo } = Astro.props;
+---
+<BaseLayout title={title} description={summary}>
+  <article>
+    <header class="project-header">
+      <h1>{title}</h1>
+      {status && <p class="status muted small">{status}</p>}
+      {summary && <p class="lead">{summary}</p>}
+      <p class="links small">
+        {link && <a href={link}>Visit &rarr;</a>}
+        {link && repo && <span> · </span>}
+        {repo && <a href={repo}>Source &rarr;</a>}
+      </p>
+    </header>
+    <div class="prose">
+      <slot />
+    </div>
+    <p class="small"><a href="/projects">&larr; All projects</a></p>
+  </article>
+</BaseLayout>
+
+<style>
+  .project-header { margin-bottom: 1.5rem; }
+  .lead { font-size: 1.05rem; }
+  .status { text-transform: uppercase; letter-spacing: 0.04em; }
+</style>

@@ -1,0 +1,14 @@
+---
+// Renders a Date as a stable, locale-independent string (e.g. "Jun 5, 2026").
+interface Props {
+  date: Date;
+}
+const { date } = Astro.props;
+const formatted = date.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
+---
+<time datetime={date.toISOString()}>{formatted}</time>

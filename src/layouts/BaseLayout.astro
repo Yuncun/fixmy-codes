@@ -1,0 +1,38 @@
+---
+// The HTML shell every page uses. Sets head metadata and drops in the
+// shared header/footer around a page's content (the <slot/>).
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  wide?: boolean;
+}
+const { title, description = 'Personal site.', wide = false } = Astro.props;
+const siteName = 'fixmy.codes';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" type="application/rss+xml" title={siteName} href="/rss.xml" />
+    <title>{title === siteName ? title : `${title} — ${siteName}`}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <Header />
+    <main class={wide ? 'container container--wide' : 'container'}>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

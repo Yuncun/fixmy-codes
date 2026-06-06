@@ -1,0 +1,43 @@
+---
+// One card in the projects grid.
+interface Props {
+  url: string;
+  title: string;
+  summary?: string;
+  status?: string;
+}
+const { url, title, summary, status } = Astro.props;
+---
+<article class="project-card">
+  <div class="row">
+    <h3><a href={url}>{title}</a></h3>
+    {status && <span class={`badge badge--${status.replace(/\s+/g, '-')}`}>{status}</span>}
+  </div>
+  {summary && <p class="muted">{summary}</p>}
+</article>
+
+<style>
+  .project-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+  }
+  .project-card .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .project-card h3 { margin: 0; font-size: 1.05rem; }
+  .project-card p { margin: 0.4rem 0 0; }
+  .badge {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+    white-space: nowrap;
+  }
+</style>
