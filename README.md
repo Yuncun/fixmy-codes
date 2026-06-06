@@ -53,7 +53,8 @@ Push to `main`. GitHub Actions builds and deploys to the Azure Static Web App
 `AZURE_STATIC_WEB_APPS_API_TOKEN` (the app's deployment token).
 
 The apex domain points at the app via a Namecheap `ALIAS` record; manage DNS and
-the domain with the `namecheap` CLI (`~/Claude/tools/namecheap/`).
+the domain with the in-repo tool, `python3 tools/namecheap/nc.py` (see
+`tools/namecheap/README.md`).
 
 The `_archive/` folder holds a snapshot of the previous "Diane" site that lived
 here, plus `dns-snapshot-2026-06-05.json` (the Namecheap zone captured before the
