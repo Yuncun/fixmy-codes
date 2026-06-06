@@ -48,11 +48,13 @@ npm run preview  # serve the built site
 ## Deploy
 
 Push to `main`. GitHub Actions builds and deploys to the Azure Static Web App
-`diane-dashboard` (resource group `diane-dashboard`), which serves
+`fixmy-codes` (resource group `fixmy-codes`, West US 2), which serves
 `fixmy.codes`. The workflow uses the repo secret
 `AZURE_STATIC_WEB_APPS_API_TOKEN` (the app's deployment token).
 
-> The Azure resource is named `diane-dashboard` for historical reasons (it
-> previously hosted an avatar-prototype dashboard). It now serves this site.
+The apex domain points at the app via a Namecheap `ALIAS` record; manage DNS and
+the domain with the `namecheap` CLI (`~/Claude/tools/namecheap/`).
 
-The `_archive/` folder holds a snapshot of the previous site that lived here.
+The `_archive/` folder holds a snapshot of the previous "Diane" site that lived
+here, plus `dns-snapshot-2026-06-05.json` (the Namecheap zone captured before the
+hosting migration).

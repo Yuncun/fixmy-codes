@@ -1,0 +1,37 @@
+[
+  {
+    "type": "ALIAS",
+    "host": "@",
+    "address": "nice-ground-0c5f46b1e.1.azurestaticapps.net.",
+    "ttl": "300",
+    "mxpref": "10"
+  },
+  {
+    "type": "CNAME",
+    "host": "dashboard",
+    "address": "nice-ground-0c5f46b1e.1.azurestaticapps.net.",
+    "ttl": "1799",
+    "mxpref": "10"
+  },
+  {
+    "type": "CNAME",
+    "host": "storymode",
+    "address": "storymode-web.proudisland-84e92871.westus2.azurecontainerapps.io.",
+    "ttl": "1799",
+    "mxpref": "10"
+  },
+  {
+    "type": "TXT",
+    "host": "@",
+    "address": "_3xpcpa15hnhaaq5qbhgjuinwmjyxje9",
+    "ttl": "1799",
+    "mxpref": "10"
+  },
+  {
+    "type": "TXT",
+    "host": "asuid.storymode",
+    "address": "8C0B8F2757CD77709329FF4E4023876A7FE3263FA8C2B09CDCB969CE74853D6E",
+    "ttl": "1799",
+    "mxpref": "10"
+  }
+]
