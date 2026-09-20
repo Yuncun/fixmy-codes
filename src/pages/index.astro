@@ -11,6 +11,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </form>
     <figure id="gen-out" hidden>
       <img id="gen-img" alt="" />
+      <figcaption id="gen-prompt" class="muted"></figcaption>
     </figure>
     <p id="gen-status" class="muted" hidden></p>
   </section>
@@ -22,6 +23,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   const out = document.getElementById('gen-out') as HTMLElement;
   const img = document.getElementById('gen-img') as HTMLImageElement;
   const status = document.getElementById('gen-status') as HTMLElement;
+  const promptOut = document.getElementById('gen-prompt') as HTMLElement;
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     status.hidden = false;
@@ -33,8 +35,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         body: JSON.stringify({ scene: scene.value }),
       });
       if (!r.ok) throw new Error(await r.text());
-      const { url } = await r.json();
+      const { url, prompt } = await r.json();
       img.src = url;
+      promptOut.textContent = prompt ?? '';
       img.alt = `Eric ${scene.value}`;
       out.hidden = false;
       status.hidden = true;
@@ -50,4 +53,5 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   #gen-scene { flex: 1; min-width: 0; }
   #gen-out { margin: 0; }
   #gen-img { max-width: 100%; height: auto; display: block; }
+  #gen-prompt { font-size: 0.8rem; line-height: 1.4; margin-top: 0.5rem; }
 </style>
