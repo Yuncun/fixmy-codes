@@ -4,9 +4,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="fixmy.codes" description="Eric Shen, software engineer.">
   <section class="gen">
-    <button id="gen-ask" type="button">What has Eric been up to?</button>
     <form id="gen-form">
-      <input id="gen-scene" type="text" placeholder="or tell him what to do" autocomplete="off" required />
+      <input id="gen-scene" type="text" value="What has Eric been up to?" autocomplete="off" required />
       <button type="submit">Go</button>
     </form>
     <figure id="gen-out" hidden>
@@ -18,7 +17,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 </BaseLayout>
 
 <script>
-  const ask = document.getElementById('gen-ask') as HTMLButtonElement;
   const form = document.getElementById('gen-form') as HTMLFormElement;
   const scene = document.getElementById('gen-scene') as HTMLInputElement;
   const out = document.getElementById('gen-out') as HTMLElement;
@@ -52,11 +50,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   };
   renderTray(load());
 
-  // body is {preset: true} for the button, {scene} for typed ideas.
+  // The bar starts as the question. Submitted unchanged it picks a pre-written
+  // scene ({preset: true}); anything else is the visitor's own idea ({scene}).
+  const DEFAULT = scene.value;
   const generate = async (body: { preset?: true; scene?: string }) => {
     status.hidden = false;
     status.textContent = 'Generating…';
-    ask.disabled = true;
     try {
       const r = await fetch('/api/generate', {
         method: 'POST',
@@ -73,19 +72,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       renderTray(items);
     } catch (err) {
       status.textContent = `Could not generate: ${(err as Error).message}`;
-    } finally {
-      ask.disabled = false;
     }
   };
-  ask.addEventListener('click', () => generate({ preset: true }));
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    generate({ scene: scene.value });
+    const text = scene.value.trim();
+    generate(text.toLowerCase() === DEFAULT.toLowerCase() ? { preset: true } : { scene: text });
   });
 </script>
 
 <style>
-  #gen-ask { display: block; width: 100%; font-size: 1.5rem; font-weight: 600; padding: 0.75rem 1rem; margin-bottom: 0.75rem; }
   #gen-form { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
   #gen-scene { flex: 1; min-width: 0; }
   #gen-out { margin: 0; }
