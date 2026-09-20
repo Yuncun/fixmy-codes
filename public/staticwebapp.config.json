@@ -1,9 +1,14 @@
 {
   "responseOverrides": {
-    "404": { "rewrite": "/404.html" }
+    "404": {
+      "rewrite": "/404.html"
+    }
   },
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin"
+  },
+  "platform": {
+    "apiRuntime": "node:20"
   }
 }

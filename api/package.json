@@ -1,0 +1,12 @@
+{
+  "name": "fixmy-codes-api",
+  "private": true,
+  "version": "0.1.0",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.6.0"
+  }
+}
