@@ -1,10 +1,10 @@
 // POST /api/generate → {url}
-//   {preset: true}  a random pre-written scenario, straight to the image model
+//   {preset: true}  a random hand-written prompt from the pack, straight to the image model
 //   {scene: "..."}  a visitor's idea, through the fal workflow (LLM rewrite → image)
 // FAL_KEY and LORA_URL come from the Static Web App's application settings,
 // never the client. The prompt is never returned: the joke is in the picture.
 const { app } = require('@azure/functions');
-const { PREFIX, SUFFIX, assemble, randomScene } = require('../prompt');
+const { PREFIX, SUFFIX, randomPrompt } = require('../prompt');
 
 const WORKFLOW = 'https://fal.run/workflows/Yuncun/eric';
 const MODEL = 'https://fal.run/fal-ai/krea-2/turbo/lora';
@@ -43,7 +43,7 @@ async function generate(request, context) {
 
   if (body.preset) {
     return fal(MODEL, key, {
-      prompt: assemble(randomScene()),
+      prompt: randomPrompt(),
       loras: [{ path: lora, scale: 1.0 }],
       image_size: 'portrait_4_3',
       num_images: 1,
