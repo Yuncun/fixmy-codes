@@ -1,20 +1,21 @@
 // The fixed parts of every prompt, and the pre-written scenarios behind the
-// "What has Eric been up to?" button. The image model gets:
+// "What has Eric been up to?" question. The image model gets:
 //   PREFIX + scene + SUFFIX
 // PREFIX carries the LoRA trigger word and the look; SUFFIX pins the framing
-// (the LoRA only holds up at medium shot or closer). Scenes describe only what
-// the camera sees, in sentences starting with "He". No place or brand names:
-// the model draws what it has seen, not what it has heard of.
-const PREFIX = 'er1cshen, a tall skinny chinese-american man in his mid 30s with a handlebar mustache and terrible posture.';
-const SUFFIX = 'Medium shot or closer, eye level, candid photograph.';
+// (the LoRA holds up best waist-up, face to camera). Scenes are 3 or 4 short
+// sentences of nouns and simple actions that continue the prefix ("is ...").
+// Adverbs, feelings, and place or brand names do nothing: the model draws what
+// it has seen, not what it has heard of.
+const PREFIX = "er1cshen, a tall chinese-american man late 20s with a handlebar mustache,";
+const SUFFIX = "Waist up, candid, looking at the camera.";
 
 const PACK = [
-  "He is hauling a wire crab pot over the rail of a small aluminum boat on gray choppy water, one large Dungeness crab clinging to the mesh, wearing orange rain bib overalls and a beanie, back rounded and hunched under the weight, overcast flat light, forested shoreline blurred behind.",
-  "He is in a cramped apartment kitchen lifting a whole bright red Dungeness crab out of a steaming stockpot with tongs, holding it at arm's length and leaning his whole upper body away from it, back rounded, steam fogging the air, warm overhead light.",
-  "He is frying a fish fillet in a cast iron pan on a cramped apartment stove, hot oil spitting, holding a pot lid up in front of his chest like a shield and leaning far back from the pan, spatula extended at full arm's length, warm kitchen light.",
-  "He is on a turf soccer field at dusk in a plain unbranded jersey and shorts, waist-up view, bent over with both hands on his knees gasping, a ball at his feet, other players far behind him and out of focus with their backs turned, a chain-link fence with a few figures slumped against it in the blurred background, orange sky over a city skyline.",
-  "He is in a small single-person office hunched so far over his laptop that his nose almost touches the screen, back rounded like a shrimp, chin jutting forward, elbows splayed on the desk, an untouched ergonomic lumbar cushion on the floor beside the chair, a large picture window behind him overlooking a corporate parking lot and evergreen trees, flat gray daylight.",
-  "He is in a small single-person office hunched so far over his laptop that his nose almost touches the screen, back rounded like a shrimp, chin jutting forward, elbows splayed on the desk, a row of empty paper coffee cups along the desk edge, a large picture window behind him dark with parking lot lamps glowing below, his face lit only by the monitor.",
+  "is standing on a small aluminum boat on gray water, holding up a wire crab pot with a large Dungeness crab inside. He wears orange rain bib overalls and a beanie. Forested shoreline behind him. Overcast light.",
+  "is cooking in a home kitchen, lifting a whole red Dungeness crab out of a steaming stockpot with tongs. He wears a dark apron over a t-shirt. Warm light.",
+  "is frying a fish fillet in a cast iron pan in a home kitchen, holding a pot lid up in front of his chest like a shield. Oil is spattering from the pan. He wears a dark apron over a t-shirt. Warm light.",
+  "is on a turf soccer field at dusk with his hands on his knees and a soccer ball at his feet. He wears a plain gray jersey and shorts. A chain-link fence with a few people slumped against it is out of focus behind him. Orange sky.",
+  "is sitting at a laptop in a small single-person office. A large window behind him looks out over a corporate parking lot and evergreen trees. He wears a wrinkled button-up shirt. Flat gray daylight.",
+  "is sitting at a laptop in a small single-person office at night. A row of empty paper coffee cups lines the desk. The window behind him is dark with parking lot lamps below. Monitor glow on his face."
 ];
 
 const assemble = (scene) => `${PREFIX} ${scene} ${SUFFIX}`;
