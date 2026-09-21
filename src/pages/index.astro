@@ -6,11 +6,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 <BaseLayout title="fixmy.codes" description="Eric Shen, software engineer.">
   <section class="gen">
     <form id="gen-form">
-      <input id="gen-scene" type="text" autocomplete="off" required />
+      <textarea id="gen-scene" rows="4" required></textarea>
       <button type="submit">Go</button>
     </form>
     <figure id="gen-out" hidden>
       <img id="gen-img" alt="Eric" />
+      <figcaption id="gen-cap"></figcaption>
     </figure>
     <p id="gen-status" class="muted" hidden></p>
     <div id="gen-tray" hidden></div>
@@ -19,9 +20,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <script>
   const form = document.getElementById('gen-form') as HTMLFormElement;
-  const scene = document.getElementById('gen-scene') as HTMLInputElement;
+  const scene = document.getElementById('gen-scene') as HTMLTextAreaElement;
   const out = document.getElementById('gen-out') as HTMLElement;
   const img = document.getElementById('gen-img') as HTMLImageElement;
+  const cap = document.getElementById('gen-cap') as HTMLElement;
   const status = document.getElementById('gen-status') as HTMLElement;
   const tray = document.getElementById('gen-tray') as HTMLElement;
 
@@ -33,6 +35,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   const show = (item: Item) => {
     img.src = item.url;
     img.alt = alt(item);
+    cap.textContent = item.scene;
     out.hidden = false;
   };
   const renderTray = (items: Item[]) => {
@@ -80,11 +83,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     e.preventDefault();
     generate(scene.value.trim());
   });
+  scene.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+  });
 </script>
 
 <style>
-  #gen-form { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
-  #gen-scene { flex: 1; min-width: 0; }
+  #gen-form { display: flex; gap: 0.5rem; align-items: flex-start; margin-bottom: 1.5rem; }
+  #gen-scene { flex: 1; min-width: 0; resize: vertical; font: inherit; }
+  #gen-cap { margin-top: 0.5rem; color: #666; font-size: 0.9rem; }
   #gen-out { margin: 0; }
   #gen-img { max-width: 100%; height: auto; display: block; }
   #gen-tray { display: flex; gap: 0.5rem; overflow-x: auto; margin-top: 1.5rem; }
