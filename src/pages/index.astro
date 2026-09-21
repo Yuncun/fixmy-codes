@@ -1,11 +1,12 @@
 ---
-// Home page: the "What has Eric been up to?" generator.
+// Home page: the "generate Eric" box. Pre-filled with one of a few default
+// prompts, rotating per visit; whatever is in the box is sent as the scene.
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="fixmy.codes" description="Eric Shen, software engineer.">
   <section class="gen">
     <form id="gen-form">
-      <input id="gen-scene" type="text" value="What has Eric been up to?" autocomplete="off" required />
+      <input id="gen-scene" type="text" autocomplete="off" required />
       <button type="submit">Go</button>
     </form>
     <figure id="gen-out" hidden>
@@ -50,21 +51,34 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   };
   renderTray(load());
 
-  // The bar starts as the question. Submitted unchanged it picks a pre-written
-  // scene ({preset: true}); anything else is the visitor's own idea ({scene}).
-  const DEFAULT = scene.value;
-  const generate = async (body: { preset?: true; scene?: string }) => {
+  // Default prompts, one per visit in order. The LoRA trigger word and the
+  // "Medium shot." suffix are added inside the fal workflow, not here.
+  const DEFAULTS = [
+    'a lanky chinese-american guy with a handlebar mustache, is cooking in a home kitchen, stirring a pan on the stove. He wears a dark apron over a t-shirt. He is frying up some ginger scallion crab. A stockpot is on the burner, and on the counter are clams in a bowl.',
+    'a lanky chinese-american guy with a handlebar mustache, is standing on a small aluminum boat on gray water, holding up a wire crab pot with a large Dungeness crab inside. He wears orange rain bib overalls and a beanie. Forested shoreline behind him. Overcast light.',
+    'a lanky chinese-american guy with a handlebar mustache, is frying a fish fillet in a cast iron pan in a home kitchen, holding a pot lid up in front of his chest like a shield. Oil is spattering from the pan. He wears a dark apron over a t-shirt. Warm light.',
+    'a lanky chinese-american guy with a handlebar mustache, is on a turf soccer field at dusk with his hands on his knees and a soccer ball at his feet. He wears a plain gray jersey and shorts. A chain-link fence with a few people slumped against it is out of focus behind him. Orange sky.',
+    'a lanky chinese-american guy with a handlebar mustache, is hunched over a laptop in a dark office, terrible posture, looking unhappily at the screen, dressed in a gray carhartt shirt.',
+    'a lanky chinese-american guy with a handlebar mustache, is eating a whole Dungeness crab at his desk with a laptop open beside it, newspaper spread under the crab. A small single-person office with a window looking over a parking lot. Flat gray daylight.',
+  ];
+  const DKEY = 'gen-default';
+  let n = 0;
+  try { n = Number(localStorage.getItem(DKEY)) || 0; } catch {}
+  scene.value = DEFAULTS[n % DEFAULTS.length];
+  try { localStorage.setItem(DKEY, String(n + 1)); } catch {}
+
+  const generate = async (text: string) => {
     status.hidden = false;
     status.textContent = 'Generating…';
     try {
       const r = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ scene: text }),
       });
       if (!r.ok) throw new Error(await r.text());
       const { url } = await r.json();
-      const item: Item = { url, scene: body.scene ?? '' };
+      const item: Item = { url, scene: text };
       show(item);
       status.hidden = true;
       const items = [item, ...load()].slice(0, 24);
@@ -76,8 +90,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   };
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const text = scene.value.trim();
-    generate(text.toLowerCase() === DEFAULT.toLowerCase() ? { preset: true } : { scene: text });
+    generate(scene.value.trim());
   });
 </script>
 
