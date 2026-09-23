@@ -9,6 +9,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <textarea id="gen-scene" rows="4" required></textarea>
       <button type="submit">Go</button>
     </form>
+    <p id="gen-note" class="muted">Prompts and images are visible to me, but not who sent them.</p>
     <figure id="gen-out" hidden>
       <img id="gen-img" alt="Eric" />
       <figcaption id="gen-cap"></figcaption>
@@ -89,7 +90,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 </script>
 
 <style>
-  #gen-form { display: flex; gap: 0.5rem; align-items: flex-start; margin-bottom: 1.5rem; }
+  #gen-form { display: flex; gap: 0.5rem; align-items: flex-start; margin-bottom: 0.5rem; }
+  #gen-note { margin: 0 0 1.5rem; font-size: 0.9rem; }
   #gen-scene { flex: 1; min-width: 0; resize: vertical; font: inherit; }
   #gen-cap { margin-top: 0.5rem; color: #666; font-size: 0.9rem; }
   #gen-out { margin: 0; }
