@@ -1,0 +1,85 @@
+---
+// Eric LoRA: photos only, no prose. Unlisted: not in the nav, noindex, left out
+// of the sitemap. Images are exported by eric-lora/hf/showcase/site_images.py.
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const base = '/eric-lora';
+// original photo -> same photo with Eric inserted; [width, height] of each
+const inserts = [
+  { name: 'einstein', before: [1050, 1400], after: [1050, 1400] },
+  { name: 'obama-biden', before: [1400, 933], after: [1400, 929] },
+  { name: 'apollo', before: [1400, 1100], after: [1400, 1098] },
+  { name: 'reagan', before: [938, 1400], after: [933, 1400] },
+];
+const prompts = ['00', '01', '02', '03', '04', '05', '06'];
+const stylePrompts = ['08', '09', '10', '11', '12', '13', '15', '17', '19'];
+const versions = [
+  { label: 'no LoRA', row: 'ctrl' },
+  { label: 'v1', row: 'v1' },
+  { label: 'v3', row: 'v3-1500' },
+  { label: 'Fizgig', row: 'B30c' },
+  { label: 'v4', row: 'v4-3000' },
+  { label: 'v4.1', row: 'v3c-3000' },
+  { label: 'v4.2', row: 'g-3000' },
+  { label: 'v5', row: 'v5-3000' },
+  { label: 'OneTrainer', row: 'v5ot-2881' },
+];
+const styles = [
+  { label: 'v3', row: 'v3-1500' },
+  { label: 'v4.2', row: 'g-3000' },
+  { label: 'v5', row: 'v5-3000' },
+];
+---
+
+<BaseLayout title="Eric LoRA" noindex wide>
+  <section class="bleed pairs">
+    {inserts.map(({ name, before, after }) => (
+      <div class="pair" style={`--a: ${before[0] / before[1] + after[0] / after[1]}`}>
+        {[['before', before], ['after', after]].map(([kind, [w, h]]) => (
+          <a href={`${base}/insert/${name}-${kind}.webp`} style={`flex: ${w / h}`}>
+            <img src={`${base}/insert/${name}-${kind}.webp`} width={w} height={h} alt="" loading="lazy" />
+          </a>
+        ))}
+      </div>
+    ))}
+  </section>
+
+  {[[versions, prompts], [styles, stylePrompts]].map(([rows, cols]) => (
+    <section class="bleed scroll">
+      <div class="grid" style={`--cols: ${cols.length}`}>
+        {rows.map(({ label, row }) => (
+          <>
+            <div class="label">{label}</div>
+            {cols.map((p) => (
+              <a href={`${base}/full/${row}_${p}.webp`}>
+                <img src={`${base}/thumb/${row}_${p}.webp`} width="480" height="480" alt="" loading="lazy" />
+              </a>
+            ))}
+          </>
+        ))}
+      </div>
+    </section>
+  ))}
+</BaseLayout>
+
+<style>
+  /* wider than the site's reading column, centred on the page */
+  .bleed {
+    width: min(100vw - 2.5rem, 110rem);
+    margin: 0 0 3rem 50%;
+    transform: translateX(-50%);
+  }
+  /* justified rows: each pair's width tracks its aspect ratio (--a), so pairs on a line share one height */
+  .pairs { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+  .pair { display: flex; gap: 0.25rem; align-items: flex-start; flex: var(--a) 1 calc(var(--a) * 18rem); }
+  .pair a { min-width: 0; }
+  img { display: block; width: 100%; height: auto; }
+  .scroll { overflow-x: auto; }
+  .grid {
+    display: grid;
+    grid-template-columns: 5.5rem repeat(var(--cols), minmax(6rem, 1fr));
+    gap: 0.25rem;
+    align-items: center;
+  }
+  .label { font-size: 0.85rem; color: var(--color-muted); }
+</style>
