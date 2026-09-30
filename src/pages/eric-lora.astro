@@ -41,8 +41,8 @@ const styles = [
 const steps = [0, 500, 1000, 1500, 2000, 2500, 3000].map((s) => ({ label: `${s} steps`, row: `v5-step${s}` }));
 const stepPrompts = ['0', '1', '2', '3', '4'];
 const grids = [
-  { title: 'Training', rows: versions, cols: prompts },
   { title: 'Training Steps', rows: steps, cols: stepPrompts },
+  { title: 'Training', rows: versions, cols: prompts },
   { title: 'Text to Image Lora', rows: styles, cols: stylePrompts },
 ];
 ---
