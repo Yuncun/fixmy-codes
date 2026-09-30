@@ -3,7 +3,7 @@ title: "Notes on harness engineering"
 description: "A template post — placeholder text that exercises every element so you can see the post structure."
 pubDate: 2026-06-05
 tags: ["harness", "agents", "template"]
-draft: false
+draft: true
 ---
 
 This is a **template post**. Every element below is here so you can see how a
